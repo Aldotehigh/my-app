@@ -1,14 +1,8 @@
+import { useRouter } from 'expo-router';
 import { FlatList, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/card';
+import { CardItem } from '../types/CardItem';
 
-interface CardItem {
-  id: string;
-  title: string;
-  image: string;
-  description: string;
-  backgroundColor: string;
-}
 
 const MOCK_DATA: CardItem[] = [
   {
@@ -34,30 +28,26 @@ const MOCK_DATA: CardItem[] = [
   },
 ];
 
-const App = () => {
-  const handlePressCard = (item: CardItem) => {
-    console.log('Tarjeta presionada:', item.title);
-  }
+export default function HomeScreen() {
+  const router = useRouter();
   return (
-    <SafeAreaView style={styles.container}>
       <FlatList
         data={MOCK_DATA}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
           <Card
             title={item.title}
             image={item.image}
             description={item.description}
-            backgroundColor={item.backgroundColor}
-            onPress={() => handlePressCard(item)}
+            onPress={() => router.push({ pathname: '/details', 
+              params: { item: JSON.stringify(item) } })}
           />
-        )}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
+            )}
+        
       />
-    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -71,6 +61,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default App;
 
  
