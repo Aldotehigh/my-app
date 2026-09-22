@@ -1,10 +1,46 @@
 import { useRouter } from 'expo-router';
-import { FlatList, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { 
+  ActivityIndicator, 
+  FlatList, Pressable, 
+  StyleSheet, 
+  Text,
+  View, } 
+  from 'react-native';
 import Card from '../components/card';
 import { CardItem } from '../types/CardItem';
 
 
-const MOCK_DATA: CardItem[] = [
+interface ApiProduct {
+  id: number;
+  title: string;
+  image: string;
+  description: string;
+  
+}
+
+const adaptProductToCardItem = (p: ApiProduct): CardItem => ({
+  id: String(p.id),
+  title: p.title,
+  image: p.image,
+  description: p.description,
+  backgroundColor: '#E3F2FD',
+});
+
+const API_URL = 'https://fakestoreapi.com/products?limit=10';
+
+export default function HomeScreen() {
+  const router = useRouter();
+  const [cards, setCards] = useState<CardItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchCards = useCallback(async () => {
+    try {
+      setError(null);
+
+      const MOCK_DATA: CardItem[] = [
   {
     id: '1',
     title: 'SUPREME',
@@ -60,6 +96,3 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
 });
-
-
- 
