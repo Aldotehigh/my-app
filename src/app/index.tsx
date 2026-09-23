@@ -39,60 +39,111 @@ export default function HomeScreen() {
   const fetchCards = useCallback(async () => {
     try {
       setError(null);
+      const response = await fetch(API_URL);
+      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+      const data: ApiProduct[] = await response.json();
+      setCards(data.map(adaptProductToCardItem));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
-      const MOCK_DATA: CardItem[] = [
-  {
-    id: '1',
-    title: 'SUPREME',
-    image: 'https://picsum.photos/seed/2/400/200',
-    description: 'Skate culture, exclusivity, and rebellious streetwear.',
-    backgroundColor: '#E3F2FD',
-  },
-  {
-    id: '2',
-    title: 'PALACE',
-    image: 'https://picsum.photos/seed/3/400/200',
-    description: 'British skate culture, irreverence, and effortless street style.',
-    backgroundColor: '#90CAF9',
-  },
-  {
-    id: '3',
-    title: 'POLO X PALACE',
-    image: 'https://picsum.photos/seed/4/400/200',
-    description: 'A fusion of art, skate culture, and bold streetwear.',
-    backgroundColor: '#2196F3',
-  },
-];
+  useEffect(() => {
+    fetchCards();
+  }, [fetchCards]);
 
-export default function HomeScreen() {
-  const router = useRouter();
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchCards();
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#0b0b14" />
+        <Text style={styles.message}>Loading Cards...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Pressable onPress={fetchCards} style={styles.retryButton}>
+          <Text style={styles.retryText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
-      <FlatList
-        data={MOCK_DATA}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <Card
-            title={item.title}
-            image={item.image}
-            description={item.description}
-            onPress={() => router.push({ pathname: '/details', 
-              params: { item: JSON.stringify(item) } })}
-          />
-            )}
-        
-      />
+    <FlatList
+      data={cards}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={styles.listContent}
+      showsVerticalScrollIndicator={false}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      ListEmptyComponent={
+          <Text style={styles.message}>No hay tarjetas disponibles.</Text>
+      }
+      renderItem={({ item }) => (
+        <Card
+          title={item.title}
+          image={item.image}
+          description={item.description}
+          onPress={() =>
+            router.push({
+              pathname: '/details',
+              params: { item: JSON.stringify(item) },
+            })
+          }
+        />
+      )}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  centered: {
     flex: 1,
-    backgroundColor: '#ecedee',
+    backgroundColor: '#F2EFE7',
     padding: 16,
   },
+
   listContent: {
     paddingTop: 16,
     paddingBottom: 16,
+  },
+
+  message: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#3368A0',
+    marginTop: 16,
+  },
+
+  errorText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#3368A0',
+    marginBottom: 16,
+  },
+
+  retryButton: {
+    backgroundColor: '#3368A0',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    alignSelf: 'center',
+  },
+
+  retryText: {
+    color: '#F2EFE7',
+    fontSize: 16,
   },
 });
