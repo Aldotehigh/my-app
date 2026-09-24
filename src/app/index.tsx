@@ -111,8 +111,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   centered: {
     flex: 1,
-    backgroundColor: '#F2EFE7',
-    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 10,
   },
 
   listContent: {
@@ -123,27 +125,28 @@ const styles = StyleSheet.create({
   message: {
     textAlign: 'center',
     fontSize: 16,
-    color: '#3368A0',
+    color: '#666',
     marginTop: 16,
   },
 
   errorText: {
     textAlign: 'center',
     fontSize: 16,
-    color: '#3368A0',
+    color: '#c0392b',
     marginBottom: 16,
+    paddingHorizontal: 24
   },
 
   retryButton: {
-    backgroundColor: '#3368A0',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
+    backgroundColor: '#333',
+    paddingVertical: 24,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     alignSelf: 'center',
   },
 
   retryText: {
-    color: '#F2EFE7',
-    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600'
   },
 });
