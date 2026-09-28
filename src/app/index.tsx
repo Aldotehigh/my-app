@@ -1,152 +1,58 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { 
-  ActivityIndicator, 
-  FlatList, Pressable, 
-  StyleSheet, 
-  Text,
-  View, } 
-  from 'react-native';
-import Card from '../components/card';
-import { CardItem } from '../types/CardItem';
+import { useState } from 'react';
+import { Alert, Button, StyleSheet, TextInput, View } from 'react-native';
+import { login } from '../utils/auth';
+import { saveToken } from '../utils/tokenStorage';
 
 
-interface ApiProduct {
-  id: number;
-  title: string;
-  image: string;
-  description: string;
-  
-}
-
-const adaptProductToCardItem = (p: ApiProduct): CardItem => ({
-  id: String(p.id),
-  title: p.title,
-  image: p.image,
-  description: p.description,
-  backgroundColor: '#E3F2FD',
-});
-
-const API_URL = 'https://fakestoreapi.com/products?limit=10';
-
-export default function HomeScreen() {
+export default function LoginScreen() {
+  const [username,  setUsername] = useState('');
+  const [password,  setPassword] = useState('');
   const router = useRouter();
-  const [cards, setCards] = useState<CardItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  
 
-  const fetchCards = useCallback(async () => {
+  const handleLogin = async () => {
     try {
-      setError(null);
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-      const data: ApiProduct[] = await response.json();
-      setCards(data.map(adaptProductToCardItem));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      const token = await login(username, password);
+      await saveToken(token);
+      router.replace('/');
+    } catch (error){
+      Alert.alert('Error', 'Usuario o contraseña incorrectos');
     }
-  }, []);
-
-  useEffect(() => {
-    fetchCards();
-  }, [fetchCards]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchCards();
   };
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0b0b14" />
-        <Text style={styles.message}>Loading Cards...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>{error}</Text>
-        <Pressable onPress={fetchCards} style={styles.retryButton}>
-          <Text style={styles.retryText}>Retry</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   return (
-    <FlatList
-      data={cards}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.listContent}
-      showsVerticalScrollIndicator={false}
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      ListEmptyComponent={
-          <Text style={styles.message}>No hay tarjetas disponibles.</Text>
-      }
-      renderItem={({ item }) => (
-        <Card
-          title={item.title}
-          image={item.image}
-          description={item.description}
-          onPress={() =>
-            router.push({
-              pathname: '/details',
-              params: { item: JSON.stringify(item) },
-            })
-          }
-        />
-      )}
+    <View style={styles.container}>
+      <TextInput
+      placeholder="Usuario"
+      value={username}
+      onChangeText={setUsername}
+      style={styles.input}
+      autoCapitalize="none"
     />
+    <TextInput
+    placeholder="Contraseña"
+    value={password}
+    onChangeText={setPassword}
+    secureTextEntry
+    style={styles.input}
+    />
+    <Button title="Iniciar sesión" onPress={handleLogin} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: 10,
-  },
-
-  listContent: {
-    paddingTop: 16,
-    paddingBottom: 16,
-  },
-
-  message: {
-    textAlign: 'center',
-    fontSize: 16,
-    color: '#666',
-    marginTop: 16,
-  },
-
-  errorText: {
-    textAlign: 'center',
-    fontSize: 16,
-    color: '#c0392b',
-    marginBottom: 16,
-    paddingHorizontal: 24
-  },
-
-  retryButton: {
-    backgroundColor: '#333',
-    paddingVertical: 24,
-    paddingHorizontal: 12,
+  container: { flex: 1, justifyContent: 'center', padding: 24 },
+  input:{
+    borderWidth: 1,
+    borderColor: '#ccc',
     borderRadius: 8,
-    alignSelf: 'center',
-  },
-
-  retryText: {
-    color: '#fff',
-    fontWeight: '600'
+    padding: 12,
+    marginBottom: 16,
   },
 });
+
+  
+
+  
