@@ -1,58 +1,33 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Button, StyleSheet, TextInput, View } from 'react-native';
-import { login } from '../utils/auth';
-import { saveToken } from '../utils/tokenStorage';
+import { Redirect } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { deleteToken, getToken } from '../utils/tokenStorage';
 
 
-export default function LoginScreen() {
-  const [username,  setUsername] = useState('');
-  const [password,  setPassword] = useState('');
-  const router = useRouter();
+export default function Index() {
+  const [checked, setChecked] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  useEffect(() => {
+    (async () => {
+      await deleteToken(); // Eliminar el token al iniciar la aplicación
+      const token = await getToken();
+      setIsLoggedIn(!!token);
+      setChecked(true);
+    })();
+  }, []);
+
+  if (!checked) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center'}}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return isLoggedIn 
+? <Redirect href="/(app)/home" /> : <Redirect href="/(app)/login" />;
+
   
 
-  const handleLogin = async () => {
-    try {
-      const token = await login(username, password);
-      await saveToken(token);
-      router.replace('/');
-    } catch (error){
-      Alert.alert('Error', 'Usuario o contraseña incorrectos');
-    }
-  };
-
-  return (
-    <View style={styles.container}>
-      <TextInput
-      placeholder="Usuario"
-      value={username}
-      onChangeText={setUsername}
-      style={styles.input}
-      autoCapitalize="none"
-    />
-    <TextInput
-    placeholder="Contraseña"
-    value={password}
-    onChangeText={setPassword}
-    secureTextEntry
-    style={styles.input}
-    />
-    <Button title="Iniciar sesión" onPress={handleLogin} />
-    </View>
-  );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
-  input:{
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-});
-
-  
-
-  
