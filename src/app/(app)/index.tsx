@@ -7,27 +7,49 @@ import {
   Text,
   View,
 } from 'react-native';
-import Card from '../components/Card';
-import { CardItem } from '../types/CardItem';
+import Card from '../../components/card';
+import { CardItem } from '../../types/CardItem';
 
 
-interface ApiProduct {
+/*interface ApiProduct {
   id: number;
   title: string;
   image: string;
   description: string;
   
+}*/
+
+interface DummyProduct {
+  id: number;
+  title: string;
+  description: string;
+  thumbnail: string;
 }
 
-const adaptProductToCardItem = (p: ApiProduct): CardItem => ({
+interface DummyApiResponse {
+  products: DummyProduct[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+/*const adaptProductToCardItem = (p: ApiProduct): CardItem => ({
   id: String(p.id),
   title: p.title,
   image: p.image,
   description: p.description,
   backgroundColor: '#E3F2FD',
+});*/
+
+const adaptProductToCardItem = (p: DummyProduct): CardItem => ({
+  id: String(p.id),
+  title: p.title,
+  image: p.thumbnail,
+  description: p.description,
+  backgroundColor: '#E3F2FD',
 });
 
-const API_URL = 'https://fakestoreapi.com/products?limit=10';
+const API_URL = 'https://dummyjson.com/products?limit=10'; // Cambia esto a tu API real si es necesario
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -41,8 +63,8 @@ export default function HomeScreen() {
       setError(null);
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-      const data: ApiProduct[] = await response.json();
-      setCards(data.map(adaptProductToCardItem));
+      const data: DummyApiResponse = await response.json();
+      setCards(data.products.map(adaptProductToCardItem));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
