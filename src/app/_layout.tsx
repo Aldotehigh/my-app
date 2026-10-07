@@ -6,7 +6,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <Stack>
       <Stack.Screen name="index" options={{ title: 'Tarjetas' }} />
-      <Stack.Screen name="detail" options={{ title: 'Detalle' }} />
+      <Stack.Screen name="details" options={{ title: 'Detalle' }} />
       </Stack>
     </SafeAreaProvider>
   );

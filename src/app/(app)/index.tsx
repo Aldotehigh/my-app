@@ -11,14 +11,6 @@ import Card from '../../components/card';
 import { CardItem } from '../../types/CardItem';
 
 
-/*interface ApiProduct {
-  id: number;
-  title: string;
-  image: string;
-  description: string;
-  
-}*/
-
 interface DummyProduct {
   id: number;
   title: string;
@@ -32,14 +24,6 @@ interface DummyApiResponse {
   skip: number;
   limit: number;
 }
-
-/*const adaptProductToCardItem = (p: ApiProduct): CardItem => ({
-  id: String(p.id),
-  title: p.title,
-  image: p.image,
-  description: p.description,
-  backgroundColor: '#E3F2FD',
-});*/
 
 const adaptProductToCardItem = (p: DummyProduct): CardItem => ({
   id: String(p.id),

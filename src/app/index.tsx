@@ -26,5 +26,5 @@ export default function Index() {
   }
 
   return isLoggedIn 
-? <Redirect href="/(app)/home" /> : <Redirect href="/(auth)/login" />;
+? <Redirect href="/(app)" /> : <Redirect href="/(auth)/login" />;
 }
