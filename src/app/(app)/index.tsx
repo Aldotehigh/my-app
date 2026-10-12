@@ -1,3 +1,4 @@
+import { deleteToken } from '@/utils/tokenStorage';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -41,6 +42,11 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const handleLogout = async () => {
+    await deleteToken(); // Eliminar el token al cerrar sesión
+    router.replace('/(auth)/login'); // Redirigir al login
+  };
 
   const fetchCards = useCallback(async () => {
     try {
@@ -87,6 +93,10 @@ export default function HomeScreen() {
   }
 
   return (
+    <>
+    <Pressable onPress={handleLogout} style={styles.logoutButton}>
+      <Text style={styles.logoutText}>Cerrar Sesión</Text>
+    </Pressable>
     <FlatList
       data={cards}
       keyExtractor={(item) => item.id}
@@ -111,6 +121,7 @@ export default function HomeScreen() {
         />
       )}
     />
+    </>
   );
 }
 
@@ -155,4 +166,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600'
   },
+
+  logoutButton: {
+    backgroundColor: '#c0392b',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+
+  logoutText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+
 });
