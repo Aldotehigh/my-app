@@ -130,55 +130,69 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: 10,
+    backgroundColor: '#FFFFFF',
+    padding: 24,
   },
 
   listContent: {
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    flexGrow: 1,
   },
 
   message: {
     textAlign: 'center',
-    fontSize: 16,
-    color: '#666',
+    fontSize: 15,
+    color: '#737373',
     marginTop: 16,
+    fontWeight: '400',
   },
 
   errorText: {
     textAlign: 'center',
-    fontSize: 16,
-    color: '#c0392b',
-    marginBottom: 16,
-    paddingHorizontal: 24
+    fontSize: 15,
+    color: '#171717',
+    marginBottom: 20,
+    paddingHorizontal: 24,
+    lineHeight: 24,
   },
 
   retryButton: {
-    backgroundColor: '#333',
-    paddingVertical: 24,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    backgroundColor: '#000000',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
     alignSelf: 'center',
+    marginTop: 8,
   },
 
   retryText: {
-    color: '#fff',
-    fontWeight: '600'
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 
   logoutButton: {
-    backgroundColor: '#c0392b',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    backgroundColor: '#000000',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 12,
     alignSelf: 'center',
-    marginBottom: 16,
+    marginTop: 20,
+    marginBottom: 20,
+    minWidth: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   logoutText: {
-    color: '#fff',
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.3,
+    textAlign: 'center',
   },
-
 });
