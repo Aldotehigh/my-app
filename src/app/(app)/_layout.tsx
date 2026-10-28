@@ -29,7 +29,7 @@ export default function AppLayout() {
 
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ title: 'Tarjetas' }} />
+      <Stack.Screen name="index" options={{ title: 'Menú del restaurante' }} />
       <Stack.Screen name="details" options={{ title: 'Detalles' }} />
     </Stack>
   )

@@ -4,4 +4,6 @@ export interface CardItem {
   image: string;
   description: string;
   backgroundColor: string;
+  price: string;
+  is_available: boolean;
 }

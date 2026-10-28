@@ -5,10 +5,12 @@ interface CardProps {
   image: string;
   description: string;
   backgroundColor?: string;
+  price: string;
+  isAvailable: boolean;
   onPress?: () => void;
 }
 
-const Card = ({ title, image, description, backgroundColor, onPress }: CardProps) => {
+const Card = ({ title, image, description, backgroundColor, price, isAvailable, onPress }: CardProps) => {
   return (
     <Pressable
       onPress={onPress}
@@ -22,6 +24,16 @@ const Card = ({ title, image, description, backgroundColor, onPress }: CardProps
       <View style={styles.content}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.description}>{description}</Text>
+        <Text style={styles.price}>
+          ${price} MXN</Text>
+        <Text
+              style={[
+                styles.availability,
+                !isAvailable && styles.unavailable,
+              ]}
+            >
+              {isAvailable ? 'Disponible' : 'Agotado'}
+            </Text>
       </View>
 
     </Pressable>
@@ -79,6 +91,22 @@ const styles = StyleSheet.create({
   cardPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
+  },
+
+  price: {
+    marginTop: 12,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#222',
+  },
+  availability: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#25633A', // Green for available
+  },
+  unavailable: {
+    color: '#A03232', // Red for unavailable
   },
 
 });

@@ -1,40 +1,17 @@
-import { deleteToken } from '@/utils/tokenStorage';
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList, Pressable,
+  FlatList,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import Card from '../../components/card';
+import { getCards } from '../../services/cards';
 import { CardItem } from '../../types/CardItem';
-
-
-interface DummyProduct {
-  id: number;
-  title: string;
-  description: string;
-  thumbnail: string;
-}
-
-interface DummyApiResponse {
-  products: DummyProduct[];
-  total: number;
-  skip: number;
-  limit: number;
-}
-
-const adaptProductToCardItem = (p: DummyProduct): CardItem => ({
-  id: String(p.id),
-  title: p.title,
-  image: p.thumbnail,
-  description: p.description,
-  backgroundColor: '#E3F2FD',
-});
-
-const API_URL = 'https://dummyjson.com/products?limit=10'; // Cambia esto a tu API real si es necesario
+import { deleteToken } from '../../utils/tokenStorage';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -44,29 +21,35 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const handleLogout = async () => {
-    await deleteToken(); // Eliminar el token al cerrar sesión
-    router.replace('/(auth)/login'); // Redirigir al login
+    await deleteToken();
+    router.replace('/(auth)/login');
   };
-
+  
   const fetchCards = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-      const data: DummyApiResponse = await response.json();
-      setCards(data.products.map(adaptProductToCardItem));
+     
+      const data = await getCards();
+      console.log('Data recibida en index:', data);
+      console.log('Array?:', Array.isArray(data));
+      console.log('Cantidad:', data?.length);
+      setCards(data);
+  
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 
+        'Error desconocido');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchCards();
-  }, [fetchCards]);
-
+  useFocusEffect(
+    useCallback(() => {
+      fetchCards();
+    }, [fetchCards])
+  );
+  
   const onRefresh = () => {
     setRefreshing(true);
     fetchCards();
@@ -75,8 +58,8 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0b0b14" />
-        <Text style={styles.message}>Loading Cards...</Text>
+        <ActivityIndicator size="large" color="#333" />
+        <Text style={styles.message}>Cargando menú...</Text>
       </View>
     );
   }
@@ -86,7 +69,7 @@ export default function HomeScreen() {
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable onPress={fetchCards} style={styles.retryButton}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>Reintentar</Text>
         </Pressable>
       </View>
     );
@@ -95,29 +78,43 @@ export default function HomeScreen() {
   return (
     <>
     <Pressable onPress={handleLogout} style={styles.logoutButton}>
-      <Text style={styles.logoutText}>Cerrar Sesión</Text>
+      <Text style={styles.logoutText}>Cerrar sesión</Text>
     </Pressable>
     <FlatList
       data={cards}
-      keyExtractor={(item) => item.id}
+      ListHeaderComponent={
+  <View style={{ marginBottom: 20 }}>
+    <Text style={{ fontSize: 28, fontWeight: '700', color: '#222' }}>
+      Nuestro menú
+    </Text>
+
+    <Text style={{ fontSize: 16, color: '#666', marginTop: 8 }}>
+      Encuentra tu próximo platillo favorito.
+    </Text>
+  </View>
+}
+      keyExtractor={(item) => String(item.id)}  // String 
       contentContainerStyle={styles.listContent}
       showsVerticalScrollIndicator={false}
       refreshing={refreshing}
       onRefresh={onRefresh}
       ListEmptyComponent={
-          <Text style={styles.message}>No hay tarjetas disponibles.</Text>
+        <Text style={styles.message}>Todavía no hay platillos en el menú</Text>
       }
       renderItem={({ item }) => (
         <Card
           title={item.title}
+          price={item.price}
           image={item.image}
           description={item.description}
-          onPress={() =>
+          isAvailable={item.is_available}
+          onPress={() => {
+            console.log('ID:', { id: item.id, item });
             router.push({
               pathname: '/details',
-              params: { item: JSON.stringify(item) },
-            })
-          }
+              params: { id: String(item.id) },   
+            });
+          }}
         />
       )}
     />
@@ -130,69 +127,45 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 24,
+    backgroundColor: '#f5f5f5',
   },
-
-  listContent: {
-    paddingTop: 12,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
-    flexGrow: 1,
-  },
-
   message: {
-    textAlign: 'center',
-    fontSize: 15,
-    color: '#737373',
-    marginTop: 16,
-    fontWeight: '400',
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
   },
-
   errorText: {
+    fontSize: 16,
+    color: '#c0392b',
+    marginBottom: 16,
     textAlign: 'center',
-    fontSize: 15,
-    color: '#171717',
-    marginBottom: 20,
     paddingHorizontal: 24,
-    lineHeight: 24,
   },
-
   retryButton: {
-    backgroundColor: '#000000',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    alignSelf: 'center',
-    marginTop: 8,
+    backgroundColor: '#333',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-
   retryText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: '#fff',
     fontWeight: '600',
-    textAlign: 'center',
   },
-
+  listContent: {
+    padding: 16,
+    gap: 16,
+  },
   logoutButton: {
-    backgroundColor: '#000000',
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 12,
-    alignSelf: 'center',
-    marginTop: 20,
-    marginBottom: 20,
-    minWidth: 180,
+    backgroundColor: '#c0392b',
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-
   logoutText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: '#fff',
     fontWeight: '600',
-    letterSpacing: 0.3,
-    textAlign: 'center',
+    fontSize: 16,
   },
 });
