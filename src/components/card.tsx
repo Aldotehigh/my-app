@@ -1,114 +1,160 @@
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface CardProps {
   title: string;
-  image: string;
-  description: string;
+  image: string | null;
+  description: string | null;
   backgroundColor?: string;
   price: string;
   isAvailable: boolean;
   onPress?: () => void;
 }
 
-const Card = ({ title, image, description, backgroundColor, price, isAvailable, onPress }: CardProps) => {
+export default function Card({
+  title,
+  image,
+  description,
+  backgroundColor,
+  price,
+  isAvailable,
+  onPress,
+}: CardProps) {
+  const [failedImage, setFailedImage] = useState<string | null>(null);
+  const hasImage = Boolean(image && failedImage !== image);
+
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityHint={onPress ? 'Abre los detalles del platillo' : undefined}
       style={({ pressed }) => [
         styles.card,
-        pressed && styles.cardPressed,
+        backgroundColor ? { backgroundColor } : null,
+        pressed && onPress ? styles.pressed : null,
       ]}
     >
-      <Image source={{ uri: image }} style={styles.image} />
+      {hasImage && image ? (
+        <Image
+          source={{ uri: image }}
+          style={styles.image}
+          onError={() => setFailedImage(image)}
+        />
+      ) : null}
 
       <View style={styles.content}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.description}>{description}</Text>
-        <Text style={styles.price}>
-          ${price} MXN</Text>
-        <Text
-              style={[
-                styles.availability,
-                !isAvailable && styles.unavailable,
-              ]}
-            >
-              {isAvailable ? 'Disponible' : 'Agotado'}
-            </Text>
-      </View>
+        <View
+          style={[
+            styles.badge,
+            isAvailable ? styles.availableBadge : styles.unavailableBadge,
+          ]}
+        >
+          <Text
+            style={[
+              styles.badgeText,
+              isAvailable ? styles.availableText : styles.unavailableText,
+            ]}
+          >
+            {isAvailable ? 'Disponible' : 'Agotado'}
+          </Text>
+        </View>
 
+        <Text style={styles.title}>{title}</Text>
+
+        {description?.trim() ? (
+          <Text style={styles.description} numberOfLines={2}>
+            {description}
+          </Text>
+        ) : null}
+
+        <View style={styles.footer}>
+          <Text style={styles.price}>
+            ${price} <Text style={styles.currency}>MXN</Text>
+          </Text>
+
+          {onPress ? <Text style={styles.detailLink}>Ver detalle ›</Text> : null}
+        </View>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 24,
-
+    backgroundColor: '#FFFDF8',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#EAEAEA',
-
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    borderColor: '#E9DED0',
+    overflow: 'hidden',
   },
-
+  pressed: {
+    opacity: 0.85,
+  },
   image: {
     width: '100%',
-    height: 220,
-    resizeMode: 'contain',
-    backgroundColor: '#FFFFFF',
+    aspectRatio: 16 / 9,
+    resizeMode: 'cover',
+    backgroundColor: '#F0E7DA',
   },
-
   content: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    padding: 18,
+    gap: 10,
   },
-
+  badge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  availableBadge: {
+    backgroundColor: '#E9EFDE',
+  },
+  unavailableBadge: {
+    backgroundColor: '#F8E6E1',
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  availableText: {
+    color: '#3F542B',
+  },
+  unavailableText: {
+    color: '#8D3728',
+  },
   title: {
-    fontSize: 19,
+    fontSize: 23,
     fontWeight: '700',
-    color: '#000000',
-    marginBottom: 10,
-    letterSpacing: -0.3,
+    color: '#292119',
   },
-
   description: {
-    fontSize: 14,
-    color: '#666666',
+    fontSize: 15,
     lineHeight: 22,
-    fontWeight: '400',
+    color: '#675B50',
   },
-
-  cardPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
+  footer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 4,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E9DED0',
   },
-
   price: {
-    marginTop: 12,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#222',
+    fontSize: 21,
+    fontWeight: '800',
+    color: '#8D3728',
   },
-  availability: {
-    marginTop: 8,
+  currency: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  detailLink: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#25633A', // Green for available
+    color: '#675B50',
   },
-  unavailable: {
-    color: '#A03232', // Red for unavailable
-  },
-
 });
-
-export default Card;

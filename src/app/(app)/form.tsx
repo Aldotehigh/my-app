@@ -13,6 +13,7 @@ import {
   Text,
   TextInput
 } from 'react-native';
+import { colors } from '../../constants/restaurantColors';
 import { createCard, updateCard } from '../../services/cards';
 import { CardItem } from '../../types/CardItem';
 
@@ -192,47 +193,47 @@ export default function FormScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, backgroundColor: '#fff', flexGrow: 1 },
+  container: { padding: 24, backgroundColor: colors.background, flexGrow: 1 },
   label: {
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 6,
     marginTop: 12,
-    color: '#333',
+    color: colors.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.surface,
   },
   textArea: { height: 100, textAlignVertical: 'top' },
   button: {
-    backgroundColor: '#333',
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 24,
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  buttonText: { color: colors.onAccent, fontWeight: '600', fontSize: 16 },
   imagePicker: {
     borderWidth: 2,
-    borderColor: '#ccc',
+    borderColor: colors.border,
     borderStyle: 'dashed',
     borderRadius: 8,
     height: 200,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.surface,
   },
-  imagePickerText: { fontSize: 16, color: '#888' },
+  imagePickerText: { fontSize: 16, color: colors.muted },
   imagePreview: { width: '100%', height: '100%', resizeMode: 'cover' },
   changeImageText: {
-    color: '#333',
+    color: colors.text,
     fontWeight: '600',
     textAlign: 'center',
     marginTop: 8,

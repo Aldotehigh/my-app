@@ -1,81 +1,122 @@
-import { useLocalSearchParams, useRouter } from 'expo-router'; //useRouter 
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
   Pressable,
   ScrollView,
-  StyleSheet, Text, View
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { deleteCard, getCard } from '../../services/cards'; // deleteCard
-import { CardItem } from '../../types/CardItem';
+import { colors } from '../../constants/restaurantColors';
+import {
+  deleteCard,
+  getCard,
+  getFavoriteStatus,
+  setCardFavorite,
+} from '../../services/cards';
+import type { CardItem } from '../../types/CardItem';
 
 export default function DetailScreen() {
-  //const { item: itemString } = useLocalSearchParams<{ item: string }>();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [card, setCard] = useState<CardItem | null>(null);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-
-  //const item: CardItem = JSON.parse(itemString);
+  const [isFavorite, setIsFavorite] = useState<boolean | null>(null);
+  const [savingFavorite, setSavingFavorite] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
 
-      (async () => {
+      async function loadDetails() {
+        setLoading(true);
+        setIsFavorite(null);
+
         try {
-          setLoading(true);
           const fresh = await getCard(Number(id));
-          if (isActive) setCard(fresh);
+          if (!isActive) return;
+
+          setCard(fresh);
+
+          try {
+            const favoriteStatus = await getFavoriteStatus(Number(id));
+
+            if (isActive) {
+              setIsFavorite(favoriteStatus.is_favorite);
+            }
+          } catch (err) {
+            if (isActive) {
+              console.error('Could not load favorite status:', err);
+            }
+          }
         } catch (err) {
-          console.error('Error al cargar detalle:', err);
-          Alert.alert('Error', 'No se pudo cargar la tarjeta');
+          if (isActive) {
+            setCard(null);
+            console.error('Could not load card details:', err);
+            Alert.alert('Error', 'No se pudo cargar el platillo');
+          }
         } finally {
           if (isActive) setLoading(false);
         }
-      })();
+      }
+
+      void loadDetails();
 
       return () => {
         isActive = false;
       };
-    }, [id])
+    }, [id]),
   );
+
+  const handleToggleFavorite = async () => {
+    if (!card || isFavorite === null || savingFavorite) return;
+
+    setSavingFavorite(true);
+
+    try {
+      const result = await setCardFavorite(Number(card.id), !isFavorite);
+      setIsFavorite(result.is_favorite);
+    } catch (err) {
+      Alert.alert(
+        'Error',
+        err instanceof Error ? err.message : 'No se pudo actualizar el favorito',
+      );
+    } finally {
+      setSavingFavorite(false);
+    }
+  };
 
   const handleEdit = () => {
     router.push({
-      pathname: '/form' as any,
+      pathname: '/form',
       params: { card: JSON.stringify(card) },
     });
   };
-  
+
   const handleDelete = () => {
     if (!card) return;
-    Alert.alert(
-      'Confirmar',
-      '¿Seguro que quieres eliminar esta tarjeta?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteCard(Number(card.id));
-              router.back(); 
-            } catch (err) {
-              Alert.alert(
-                'Error',
-                err instanceof Error ? err.message : 'No se pudo eliminar'
-              );
-            }
-          },
+
+    Alert.alert('Confirmar', '¿Seguro que quieres eliminar este platillo?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteCard(Number(card.id));
+            router.back();
+          } catch (err) {
+            Alert.alert(
+              'Error',
+              err instanceof Error ? err.message : 'No se pudo eliminar',
+            );
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (loading) {
@@ -89,25 +130,44 @@ export default function DetailScreen() {
   if (!card) {
     return (
       <View style={styles.centered}>
-        <Text>No se encontró la tarjeta</Text>
+        <Text>No se encontró el platillo</Text>
       </View>
     );
   }
 
   return (
-    // <View style={styles.container}>
-    //   <Image source={{ uri: item.image }} style={styles.image} />
-    //   <Text style={styles.title}>{item.title}</Text>
-    //   <Text style={styles.description}>{item.description}</Text>
-    // </View>
     <ScrollView contentContainerStyle={styles.container}>
-      <Image source={{ uri: card.image }} style={styles.image} />
+      {card.image ? (
+        <Image source={{ uri: card.image }} style={styles.image} />
+      ) : null}
 
       <View style={styles.content}>
         <Text style={styles.title}>{card.title}</Text>
+        <Text style={styles.price}>${card.price} MXN</Text>
         <Text style={styles.description}>{card.description}</Text>
-        
-        {/* Botones de acción */}
+
+        {isFavorite === null ? (
+          <Text style={styles.description}>
+            No se pudo consultar el estado del favorito.
+          </Text>
+        ) : (
+          <Pressable
+            onPress={handleToggleFavorite}
+            disabled={savingFavorite}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: savingFavorite, busy: savingFavorite }}
+            style={styles.favoriteButton}
+          >
+            {savingFavorite ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : (
+              <Text style={styles.favoriteText}>
+                {isFavorite ? '♥ Quitar de favoritos' : '♡ Guardar en favoritos'}
+              </Text>
+            )}
+          </Pressable>
+        )}
+
         <View style={styles.actions}>
           <Pressable
             onPress={handleEdit}
@@ -129,13 +189,25 @@ export default function DetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flexGrow: 1, backgroundColor: colors.surface },
   image: { width: '100%', height: 250 },
-  title: { fontSize: 22, fontWeight: 'bold', padding: 16 },
-  description: { fontSize: 16, paddingHorizontal: 16, color: '#555' },
+  title: { fontSize: 30, fontWeight: '700', color: colors.text },
+  description: { fontSize: 16, lineHeight: 24, color: colors.muted },
   content: {
     padding: 20,
     gap: 12,
+  },
+  price: { color: colors.accent, fontSize: 22, fontWeight: '700' },
+  favoriteButton: {
+    padding: 14,
+    alignItems: 'center',
+    borderRadius: 8,
+    backgroundColor: colors.soft,
+  },
+  favoriteText: {
+    color: colors.accent,
+    fontSize: 16,
+    fontWeight: '600',
   },
   actions: {
     flexDirection: 'row',
@@ -149,13 +221,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editButton: {
-    backgroundColor: '#333',
+    backgroundColor: colors.accent,
   },
   deleteButton: {
-    backgroundColor: '#c0392b',
+    backgroundColor: colors.accent,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.onAccent,
     fontWeight: '600',
     fontSize: 16,
   },
@@ -163,45 +235,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
 });
-
-
-/*import { useLocalSearchParams } from "expo-router";
-import { Image, StyleSheet, Text, View } from "react-native";
-import { CardItem } from "../types/CardItem";
-
-export default function DetailScreen() {
-    const { item: itemString } = useLocalSearchParams<{ item: string }>();
-    const item: CardItem = JSON.parse(itemString);
-
-    return (
-        <View style={styles.container}>
-            <Image source={{ uri: item.image }} style={styles.image} />
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.description}>{item.description}</Text>
-        </View>
-    );
-}
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    image: {
-        width: '100%',
-        height: 200,
-    },
-    title: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        padding: 16,
-    },
-    description: {
-        fontSize: 16,
-        paddingHorizontal: 16,
-        color: '#555',
-    },
-});*/

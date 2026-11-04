@@ -1,3 +1,8 @@
+export interface Category {
+  id: number;
+  name: string;
+}
+
 export interface CardItem {
   id: string;
   title: string;
@@ -6,4 +11,5 @@ export interface CardItem {
   backgroundColor: string;
   price: string;
   is_available: boolean;
+  category: Category | null;
 }

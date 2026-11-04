@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { colors } from '../../constants/restaurantColors';
 import { login } from "../../utils/auth";
 import { saveToken } from "../../utils/tokenStorage";
 
@@ -23,8 +24,6 @@ export default function LoginScreen() {
       Alert.alert("Error", "Por favor ingrese usuario y constraseña");
       return;
     }
-
-    Alert.alert(password);
 
     try {
       setLoading(true);
@@ -41,7 +40,7 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.loginContainer}>
-        <Text style={styles.title}>Iniciar Sesión</Text>
+        <Text style={styles.title}>Bienvenido al restaurante</Text>
 
         <Text style={styles.subtitle}>
           Ingresa tus datos para continuar
@@ -51,7 +50,7 @@ export default function LoginScreen() {
 
         <TextInput
           placeholder="Ingresa tu usuario"
-          placeholderTextColor="#777"
+          placeholderTextColor={colors.muted}
           value={username}
           onChangeText={setUsername}
           style={styles.input}
@@ -63,7 +62,7 @@ export default function LoginScreen() {
 
         <TextInput
           placeholder="Ingresa tu contraseña"
-          placeholderTextColor="#777"
+          placeholderTextColor={colors.muted}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -93,7 +92,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.background,
     justifyContent: "center",
     paddingHorizontal: 28,
   },
@@ -105,38 +104,38 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontWeight: "800",
-    color: "#000000",
+    color: colors.text,
     marginBottom: 8,
   },
 
   subtitle: {
     fontSize: 16,
-    color: "#555555",
+    color: colors.muted,
     marginBottom: 36,
   },
 
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#000000",
+    color: colors.text,
     marginBottom: 8,
   },
 
   input: {
     height: 54,
     borderRadius: 12,
-    borderColor: "#000000",
+    borderColor: colors.border,
     borderWidth: 1,
     marginBottom: 22,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: "#000000",
-    backgroundColor: "#FFFFFF",
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
 
   button: {
     height: 56,
-    backgroundColor: "#000000",
+    backgroundColor: colors.accent,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
@@ -148,7 +147,7 @@ const styles = StyleSheet.create({
   },
 
   buttonText: {
-    color: "#FFFFFF",
+    color: colors.onAccent,
     fontSize: 16,
     fontWeight: "700",
   },
