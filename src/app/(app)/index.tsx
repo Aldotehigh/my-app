@@ -1,3 +1,8 @@
+import { useAuth } from '../../context/AuthContext';
+import { ROLE_LABELS } from '../../types/CurrentUser';
+import { announce } from '../../utils/announce';
+import { usePreferences } from '../../context/PreferencesContext';
+import type { RestaurantColors } from '../../constants/restaurantColors';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -12,7 +17,7 @@ import {
   View,
 } from 'react-native';
 import Card from '../../components/card';
-import { colors } from '../../constants/restaurantColors';
+import CategorySelector from '../../components/CategorySelector';
 import { getCardsPage } from '../../services/cards';
 import { getCategories } from '../../services/categories';
 import type { CardItem, Category } from '../../types/CardItem';
@@ -21,7 +26,11 @@ import { getMenuPageSize } from '../../utils/menuPreferences';
 import { deleteToken } from '../../utils/tokenStorage';
 
 export default function HomeScreen() {
+  const { colors, t, isDark } = usePreferences();
+  const styles = createStyles(colors);
+
   const router = useRouter();
+  const { user, reloadUser } = useAuth();
   const [cards, setCards] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,9 +76,10 @@ export default function HomeScreen() {
         setCards(data.results);
         setCategories(categoryList);
         setHasNextPage(Boolean(data.next));
+        announce(`${t('Menu updated')}. ${data.count} ${t('Dishes')}. ${t('Page')} ${page}.`);
       } catch (err) {
         if (isCurrent()) {
-          setError(err instanceof Error ? err.message : 'Error desconocido');
+          setError(err instanceof Error ? err.message : t("Unknown error"));
         }
       } finally {
         if (isCurrent()) {
@@ -78,7 +88,7 @@ export default function HomeScreen() {
         }
       }
     },
-    [search, categoryId, availableOnly, page, pageSize],
+    [search, categoryId, availableOnly, page, pageSize, t],
   );
 
   useFocusEffect(
@@ -126,7 +136,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={styles.message}>Cargando menú...</Text>
+        <Text style={styles.message}>{t("Loading menu...")}</Text>
       </View>
     );
   }
@@ -136,7 +146,7 @@ export default function HomeScreen() {
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable onPress={handleRetry} style={styles.retryButton}>
-          <Text style={styles.retryText}>Reintentar</Text>
+          <Text style={styles.retryText}>{t("Retry")}</Text>
         </Pressable>
       </View>
     );
@@ -154,65 +164,50 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.eyebrow}>CARTA DEL RESTAURANTE</Text>
-            <Text style={styles.heading}>Nuestro menú</Text>
+            <View style={{ padding: 16, borderRadius: 14, gap: 8, backgroundColor: colors.soft, marginBottom: 16 }}>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>{user?.username}</Text>
+              <Text style={{ color: colors.accent }}>{user ? t(ROLE_LABELS[user.role]) : ''}</Text>
+              <Button color={colors.accent} title={t('Refresh profile')} onPress={() => void reloadUser()} />
+            </View>
+            {user?.can_manage_menu ? (
+              <Button color={colors.accent} title={t('New dish')} onPress={() => router.push('/form')} />
+            ) : null}
+            <Text style={styles.eyebrow}>{t("RESTAURANT MENU")}</Text>
+            <Text accessibilityRole="header" style={styles.heading}>{t("Our menu")}</Text>
             <Text style={styles.subtitle}>
-              Encuentra tu próximo platillo favorito.
-            </Text>
+              {t("Find your next favorite dish.")}</Text>
             <View style={styles.quickLinks}>
               <Pressable accessibilityRole="button" style={styles.quickLink} onPress={() => router.push('/(app)/favorites')}>
-                <Text style={styles.quickLinkText}>♥ Mis favoritos</Text>
+                <Text style={styles.quickLinkText}>{t("♥ My favorites")}</Text>
               </Pressable>
               <Pressable accessibilityRole="button" style={styles.quickLink} onPress={() => router.push('/(app)/settings')}>
-                <Text style={styles.quickLinkText}>Ajustes</Text>
+                <Text style={styles.quickLinkText}>{t("Settings")}</Text>
               </Pressable>
             </View>
 
-            <TextInput
+            <TextInput keyboardAppearance={isDark ? 'dark' : 'light'}
               value={searchInput}
               onChangeText={setSearchInput}
               onSubmitEditing={handleSearch}
-              placeholder="Buscar platillos"
+              placeholder={t("Search dishes")}
               placeholderTextColor={colors.muted}
-              accessibilityLabel="Buscar platillos"
+              accessibilityLabel={t("Search dishes")}
               returnKeyType="search"
               style={styles.searchInput}
             />
 
-            <Button color={colors.accent} title="Buscar" onPress={handleSearch} />
+            <Button color={colors.accent} title={t("Search")} onPress={handleSearch} />
 
-            <View style={styles.categories}>
-              {[{ id: null, name: 'Todas' }, ...categories].map((category) => {
-                const isSelected = categoryId === category.id;
-
-                return (
-                  <Pressable
-                    key={category.id ?? 'all'}
-                    onPress={() => handleCategoryChange(category.id)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isSelected }}
-                    style={[
-                      styles.categoryButton,
-                      isSelected && styles.selectedCategoryButton,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryText,
-                        isSelected && styles.selectedCategoryText,
-                      ]}
-                    >
-                      {category.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <CategorySelector
+              categories={categories}
+              selectedId={categoryId}
+              onSelect={handleCategoryChange}
+            />
 
             <View style={styles.availabilityRow}>
-              <Text>Solo disponibles</Text>
+              <Text style={{ color: colors.text }}>{t("Available only")}</Text>
               <Switch
-                accessibilityLabel="Mostrar solo platillos disponibles"
+                accessibilityLabel={t("Show available dishes only")}
                 value={availableOnly}
                 trackColor={{ true: colors.olive }}
                 onValueChange={handleAvailabilityChange}
@@ -223,21 +218,21 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <Text style={styles.message}>
             {search || categoryId !== null || availableOnly
-              ? 'No se encontraron platillos con estos filtros.'
-              : 'Todavía no hay platillos en el menú.'}
+              ? t("No dishes match these filters.")
+              : t("There are no dishes on the menu yet.")}
           </Text>
         }
         ListFooterComponent={
           page > 1 || hasNextPage ? (
             <View style={styles.pagination}>
               <Button color={colors.accent}
-                title="Anterior"
+                title={t("Previous")}
                 disabled={page === 1}
                 onPress={() => setPage((current) => Math.max(1, current - 1))}
               />
-              <Text>Página {page}</Text>
+              <Text style={{ color: colors.text }}>{t("Page")} {page}</Text>
               <Button color={colors.accent}
-                title="Siguiente"
+                title={t("Next")}
                 disabled={!hasNextPage}
                 onPress={() => {
                   setHasNextPage(false);
@@ -264,13 +259,13 @@ export default function HomeScreen() {
         )}
       />
       <Pressable accessibilityRole="button" onPress={handleLogout} style={styles.logoutButton}>
-        <Text style={styles.logoutText}>Cerrar sesión</Text>
+        <Text style={styles.logoutText}>{t("Sign out")}</Text>
       </Pressable>
     </>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: RestaurantColors) => StyleSheet.create({
   centered: {
     flex: 1,
     justifyContent: 'center',
@@ -291,6 +286,7 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     backgroundColor: colors.accent,
+    minHeight: 48,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -344,25 +340,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 8,
   },
-  categories: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryButton: {
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: colors.surface,
-  },
-  selectedCategoryButton: {
-    backgroundColor: colors.accent,
-  },
-  categoryText: {
-    color: colors.text,
-  },
-  selectedCategoryText: {
-    color: colors.onAccent,
-  },
   availabilityRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -371,6 +348,8 @@ const styles = StyleSheet.create({
   },
   pagination: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     justifyContent: 'space-between',
     alignItems: 'center',
   },

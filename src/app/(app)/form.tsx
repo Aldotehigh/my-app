@@ -1,6 +1,12 @@
+import { useAuth } from '../../context/AuthContext';
+import CategorySelector from '../../components/CategorySelector';
+import { getCategories } from '../../services/categories';
+import type { Category } from '../../types/CardItem';
+import { usePreferences } from '../../context/PreferencesContext';
+import type { RestaurantColors } from '../../constants/restaurantColors';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,16 +17,21 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput
+  TextInput,
+  View,
+  Button,
 } from 'react-native';
-import { colors } from '../../constants/restaurantColors';
 import { createCard, updateCard } from '../../services/cards';
 import { CardItem } from '../../types/CardItem';
 
 export default function FormScreen() {
+  const { colors, t, isDark } = usePreferences();
+  const styles = createStyles(colors);
+
   const { card } = useLocalSearchParams<{ card?: string }>();
   const editing: CardItem | null = card ? JSON.parse(card) : null;
   const router = useRouter();
+  const { user } = useAuth();
 
   const [title, setTitle] = useState(editing?.title ?? '');
   const [description, setDescription] = useState(editing?.description ?? '');
@@ -28,12 +39,32 @@ export default function FormScreen() {
   const [imageUri, setImageUri] = useState<string | null>(editing?.image ?? null);
   const [isAvailable, setIsAvailable] = useState(editing?.is_available ?? true);
   const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState<number | null>(editing?.category?.id ?? null);
+  const [categoryError, setCategoryError] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoryReloadKey, setCategoryReloadKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    setCategoriesLoading(true);
+    setCategoryError(false);
+    getCategories().then((data) => {
+      if (active) setCategories(data);
+    }).catch(() => {
+      if (active) setCategoryError(true);
+    }).finally(() => {
+      if (active) setCategoriesLoading(false);
+    });
+    return () => { active = false; };
+  }, [categoryReloadKey]);
+
 
   const pickImage = async () => {
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso denegado', 'Necesitamos acceso a tus fotos');
+        Alert.alert(t("Permission denied"), t("We need access to your photos"));
         return;
       }
     }
@@ -50,10 +81,15 @@ export default function FormScreen() {
   };
 
   const handleSave = async () => {
-    if (saving) return;
+    if (saving || !user?.can_manage_menu || categoriesLoading || categoryError) return;
+
+    if (categoryId === null) {
+      Alert.alert(t('Error'), t('Select a category.'));
+      return;
+    }
 
     if (!title.trim() || !description.trim() || !imageUri || !price.trim()) {
-      Alert.alert('Error', 'Todos los campos son obligatorios');
+      Alert.alert(t("Error"), t("All fields are required"));
       return;
     }
 
@@ -61,8 +97,8 @@ export default function FormScreen() {
 
     if (!/^\d{1,6}(\.\d{1,2})?$/.test(normalizedPrice)) {
       Alert.alert(
-        'Precio inválido',
-        'Ingresa un precio entre 0 y 999999.99, con máximo dos decimales.',
+        t("Invalid price"),
+        t("Enter a price from 0 to 999999.99 with up to two decimal places."),
       );
       return;
     }
@@ -74,7 +110,7 @@ export default function FormScreen() {
       formData.append('title', title);
       formData.append('description', description);
       formData.append('price', normalizedPrice);
-      formData.append('is_available', isAvailable.toString());
+      formData.append('category_id', String(categoryId));
       formData.append('is_available', String(isAvailable));
       const isNewImage = imageUri !== editing?.image;
       if (isNewImage) {
@@ -83,7 +119,7 @@ export default function FormScreen() {
           const blob = await response.blob();
           formData.append('image', blob, 'photo.jpg');
 
-          // Nota: En web, el tipo MIME se infiere automáticamente del blob, por lo que no es necesario especificarlo.
+          // The browser supplies the MIME type from the blob.
         } else {
           const filename = imageUri.split('/').pop() || 'photo.jpg';
           const match = /\.(\w+)$/.exec(filename);
@@ -106,85 +142,113 @@ export default function FormScreen() {
       router.back();
     } catch (err) {
       Alert.alert(
-        'Error',
-        err instanceof Error ? err.message : 'No se pudo guardar'
+        t("Error"),
+        err instanceof Error ? err.message : t("Could not save")
       );
     } finally {
       setSaving(false);
     }
   };
 
+  if (!user?.can_manage_menu) {
+    return (
+      <View style={{ flex: 1, padding: 24, justifyContent: 'center', gap: 16, backgroundColor: colors.background }}>
+        <Text style={{ color: colors.text }}>{t('Only administrators can manage dishes.')}</Text>
+        <Button color={colors.accent} title={t('Back to menu')} onPress={() => router.replace('/(app)')} />
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.label}>Título</Text>
-      <TextInput
+      <Text style={styles.label}>{t("Title")}</Text>
+      <TextInput placeholderTextColor={colors.muted} keyboardAppearance={isDark ? 'dark' : 'light'}
         value={title}
         onChangeText={setTitle}
-        placeholder="Ej: Mi primera tarjeta"
+        accessibilityLabel={t("Title")}
+        placeholder={t("Example: Grilled salmon")}
         style={styles.input}
         editable={!saving}
       />
 
-      <Text style={styles.label}>Descripción</Text>
-      <TextInput
+      <Text style={styles.label}>{t("Description")}</Text>
+      <TextInput placeholderTextColor={colors.muted} keyboardAppearance={isDark ? 'dark' : 'light'}
         value={description}
         onChangeText={setDescription}
-        placeholder="Describe la tarjeta..."
+        accessibilityLabel={t("Description")}
+        placeholder={t("Describe the dish...")}
         style={[styles.input, styles.textArea]}
         multiline
         numberOfLines={4}
         editable={!saving}
       />
-      <Text style={styles.label}>Precio (MXN)</Text>
-      <TextInput
+      <Text style={styles.label}>{t("Price (MXN)")}</Text>
+      <TextInput placeholderTextColor={colors.muted} keyboardAppearance={isDark ? 'dark' : 'light'}
         value={price}
         onChangeText={setPrice}
-        placeholder="Ej: 125.00"
+        accessibilityLabel={t("Price (MXN)")}
+        placeholder={t("Example: 125.00")}
         keyboardType="decimal-pad"
         style={styles.input}
         editable={!saving}
       />
-      <Text style={styles.label}>Disponibilidad</Text>
+      <Text style={styles.label}>{t('Category')}</Text>
+      {categoriesLoading ? <ActivityIndicator color={colors.accent} /> : categoryError ? (
+        <View style={{ gap: 12 }}>
+          <Text style={{ color: colors.text }}>{t('Could not load categories.')}</Text>
+          <Button color={colors.accent} title={t('Retry')} onPress={() => setCategoryReloadKey((current) => current + 1)} />
+        </View>
+      ) : (
+        <CategorySelector
+          categories={categories}
+          selectedId={categoryId}
+          onSelect={setCategoryId}
+          emptyLabel={t('Select a category')}
+        />
+      )}
+      <Text style={styles.label}>{t("Availability")}</Text>
 
       <Switch
-        accessibilityLabel="Disponibilidad del platillo"
+        accessibilityLabel={t("Dish availability")}
         value={isAvailable}
         onValueChange={setIsAvailable}
         disabled={saving}
       />
 
-      <Text>
-        {isAvailable ? 'Disponible' : 'Agotado'}
+      <Text style={{ color: colors.text }}>
+        {isAvailable ? t("Available") : t("Sold out")}
       </Text>
-      <Text style={styles.label}>Imagen</Text>
+      <Text style={styles.label}>{t("Image")}</Text>
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t("Choose image")}
         onPress={pickImage}
         style={styles.imagePicker}
         disabled={saving}
       >
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+          <Image accessible={false} source={{ uri: imageUri }} style={styles.imagePreview} />
         ) : (
-          <Text style={styles.imagePickerText}>📷 Seleccionar imagen</Text>
+          <Text style={styles.imagePickerText}>{t("📷 Choose image")}</Text>
         )}
       </Pressable>
 
       {imageUri && (
         <Pressable onPress={pickImage} disabled={saving}>
-          <Text style={styles.changeImageText}>Cambiar imagen</Text>
+          <Text style={styles.changeImageText}>{t("Change image")}</Text>
         </Pressable>
       )}
 
       <Pressable
         onPress={handleSave}
-        disabled={saving}
+        disabled={saving || categoriesLoading || categoryError}
         style={[styles.button, saving && styles.buttonDisabled]}
       >
         {saving ? (
           <ActivityIndicator color="#fff" />
         ) : (
           <Text style={styles.buttonText}>
-            {editing ? 'Actualizar' : 'Crear'}
+            {editing ? t("Update") : t("Create")}
           </Text>
         )}
       </Pressable>
@@ -192,7 +256,7 @@ export default function FormScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: RestaurantColors) => StyleSheet.create({
   container: { padding: 24, backgroundColor: colors.background, flexGrow: 1 },
   label: {
     fontSize: 14,
@@ -207,9 +271,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    color: colors.text,
     backgroundColor: colors.surface,
   },
-  textArea: { height: 100, textAlignVertical: 'top' },
+  textArea: { minHeight: 100, textAlignVertical: 'top' },
   button: {
     backgroundColor: colors.accent,
     paddingVertical: 14,

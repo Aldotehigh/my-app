@@ -87,8 +87,15 @@ export function setCardFavorite(id: number, isFavorite: boolean) {
   });
 }
 
-export function getFavoritesPage(page: number) {
+export function getFavoritesPage(page: number, pageSize = 10) {
   return fetchWithAuth<PaginatedResponse<CardItem>>(
-    `${ENDPOINT}/favorites/?page=${page}`,
+    `${ENDPOINT}/favorites/?page=${page}&page_size=${pageSize}`,
   );
+}
+export function updateCardAvailability(id: number, isAvailable: boolean) {
+  return fetchWithAuth<CardItem>(`${ENDPOINT}/${id}/availability/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_available: isAvailable }),
+  });
 }

@@ -1,19 +1,24 @@
+import { usePreferences } from '../../context/PreferencesContext';
+import type { RestaurantColors } from '../../constants/restaurantColors';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    Button,
-    FlatList,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Button,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import Card from '../../components/card';
-import { colors } from '../../constants/restaurantColors';
 import { getFavoritesPage } from '../../services/cards';
 import type { CardItem } from '../../types/CardItem';
+import { getMenuPageSize } from '../../utils/menuPreferences';
 
 export default function FavoritesScreen() {
+  const { colors, t } = usePreferences();
+  const styles = createStyles(colors);
+
   const router = useRouter();
   const [cards, setCards] = useState<CardItem[]>([]);
   const [page, setPage] = useState(1);
@@ -32,8 +37,9 @@ export default function FavoritesScreen() {
 
         try {
           // Find the last valid page if favorites were removed in the detail screen.
-          const firstPage = await getFavoritesPage(1);
-          const pageSize = firstPage.results.length;
+          const requestedPageSize = await getMenuPageSize();
+          const firstPage = await getFavoritesPage(1, requestedPageSize);
+          const pageSize = requestedPageSize;
           const lastPage = firstPage.next && pageSize > 0
             ? Math.ceil(firstPage.count / pageSize)
             : 1;
@@ -45,7 +51,7 @@ export default function FavoritesScreen() {
             return;
           }
 
-          const data = page === 1 ? firstPage : await getFavoritesPage(page);
+          const data = page === 1 ? firstPage : await getFavoritesPage(page, requestedPageSize);
 
           if (isActive) {
             setCards(data.results);
@@ -54,7 +60,7 @@ export default function FavoritesScreen() {
         } catch (err) {
           if (isActive) {
             setError(
-              err instanceof Error ? err.message : 'No se pudieron cargar los favoritos.',
+              err instanceof Error ? err.message : t("Could not load favorites."),
             );
           }
         } finally {
@@ -67,14 +73,14 @@ export default function FavoritesScreen() {
       return () => {
         isActive = false;
       };
-    }, [page, reloadKey]),
+    }, [page, reloadKey, t]),
   );
 
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-        <Text>Cargando favoritos...</Text>
+        <ActivityIndicator color={colors.accent} size="large" />
+        <Text style={{ color: colors.text }}>{t("Loading favorites...")}</Text>
       </View>
     );
   }
@@ -82,9 +88,9 @@ export default function FavoritesScreen() {
   if (error) {
     return (
       <View style={styles.centered}>
-        <Text>{error}</Text>
+        <Text style={{ color: colors.text }}>{error}</Text>
         <Button color={colors.accent}
-          title="Reintentar"
+          title={t("Retry")}
           onPress={() => setReloadKey((current) => current + 1)}
         />
       </View>
@@ -94,20 +100,30 @@ export default function FavoritesScreen() {
   return (
     <FlatList
       data={cards}
+      ListHeaderComponent={
+        <View style={styles.header}>
+          <Text accessibilityRole="header" style={styles.title}>{t("Your favorites")}</Text>
+          <Text style={styles.description}>{t("The dishes you want to enjoy again.")}</Text>
+        </View>
+      }
       keyExtractor={(item) => String(item.id)}
       contentContainerStyle={styles.listContent}
-      ListEmptyComponent={<Text>Todavía no tienes platillos favoritos.</Text>}
+      ListEmptyComponent={<View style={styles.empty}>
+        <Text accessibilityRole="header" style={styles.title}>{t("Your list starts here...")}</Text>
+        <Text style={styles.description}>{t("Open a dish from the menu and tap “Save to favorites”.")}</Text>
+        <Button color={colors.accent} title={t("Explore menu")} onPress={() => router.replace('/(app)')} />
+      </View>}
       ListFooterComponent={
         page > 1 || hasNextPage ? (
           <View style={styles.pagination}>
             <Button color={colors.accent}
-              title="Anterior"
+              title={t("Previous")}
               disabled={page === 1}
               onPress={() => setPage(page - 1)}
             />
-            <Text>Página {page}</Text>
+            <Text style={{ color: colors.text }}>{t("Page")} {page}</Text>
             <Button color={colors.accent}
-              title="Siguiente"
+              title={t("Next")}
               disabled={!hasNextPage}
               onPress={() => setPage(page + 1)}
             />
@@ -133,7 +149,11 @@ export default function FavoritesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: RestaurantColors) => StyleSheet.create({
+  header: { gap: 8, marginBottom: 12 },
+  title: { fontSize: 26, fontWeight: '700', color: colors.text },
+  description: { fontSize: 16, lineHeight: 24, color: colors.muted },
+  empty: { padding: 24, gap: 16, borderRadius: 20, backgroundColor: colors.surface },
   centered: {
     flex: 1,
     justifyContent: 'center',
@@ -144,9 +164,13 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
     gap: 16,
+    flexGrow: 1,
+    backgroundColor: colors.background,
   },
   pagination: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     justifyContent: 'space-between',
     alignItems: 'center',
   },

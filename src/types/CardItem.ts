@@ -1,6 +1,7 @@
 export interface Category {
   id: number;
   name: string;
+  area: 'kitchen' | 'bar';
 }
 
 export interface CardItem {

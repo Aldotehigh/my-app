@@ -1,5 +1,7 @@
+import { usePreferences } from '../context/PreferencesContext';
+import type { RestaurantColors } from '../constants/restaurantColors';
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 interface CardProps {
   title: string;
@@ -20,14 +22,25 @@ export default function Card({
   isAvailable,
   onPress,
 }: CardProps) {
+  const { colors, t } = usePreferences();
+  const styles = createStyles(colors);
+  const { fontScale } = useWindowDimensions();
+
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const hasImage = Boolean(image && failedImage !== image);
 
   return (
     <Pressable
       onPress={onPress}
+      accessible
+      accessibilityLabel={[
+        title,
+        description,
+        `${t('Price')}: ${price} ${t('Mexican pesos')}`,
+        t(isAvailable ? 'Available' : 'Sold out'),
+      ].filter(Boolean).join('. ')}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityHint={onPress ? 'Abre los detalles del platillo' : undefined}
+      accessibilityHint={onPress ? t("Opens dish details") : undefined}
       style={({ pressed }) => [
         styles.card,
         backgroundColor ? { backgroundColor } : null,
@@ -36,6 +49,7 @@ export default function Card({
     >
       {hasImage && image ? (
         <Image
+          accessible={false}
           source={{ uri: image }}
           style={styles.image}
           onError={() => setFailedImage(image)}
@@ -55,14 +69,14 @@ export default function Card({
               isAvailable ? styles.availableText : styles.unavailableText,
             ]}
           >
-            {isAvailable ? 'Disponible' : 'Agotado'}
+            {isAvailable ? t("Available") : t("Sold out")}
           </Text>
         </View>
 
         <Text style={styles.title}>{title}</Text>
 
         {description?.trim() ? (
-          <Text style={styles.description} numberOfLines={2}>
+          <Text style={styles.description} numberOfLines={fontScale > 1.2 ? undefined : 2}>
             {description}
           </Text>
         ) : null}
@@ -72,19 +86,19 @@ export default function Card({
             ${price} <Text style={styles.currency}>MXN</Text>
           </Text>
 
-          {onPress ? <Text style={styles.detailLink}>Ver detalle ›</Text> : null}
+          {onPress ? <Text style={styles.detailLink}>{t("View details ›")}</Text> : null}
         </View>
       </View>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: RestaurantColors) => StyleSheet.create({
   card: {
-    backgroundColor: '#FFFDF8',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E9DED0',
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   pressed: {
@@ -94,7 +108,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 16 / 9,
     resizeMode: 'cover',
-    backgroundColor: '#F0E7DA',
+    backgroundColor: colors.border,
   },
   content: {
     padding: 18,
@@ -107,30 +121,29 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   availableBadge: {
-    backgroundColor: '#E9EFDE',
+    backgroundColor: colors.successBackground,
   },
   unavailableBadge: {
-    backgroundColor: '#F8E6E1',
+    backgroundColor: colors.soft,
   },
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
   },
   availableText: {
-    color: '#3F542B',
+    color: colors.olive,
   },
   unavailableText: {
-    color: '#8D3728',
+    color: colors.accent,
   },
   title: {
     fontSize: 23,
     fontWeight: '700',
-    color: '#292119',
+    color: colors.text,
   },
   description: {
     fontSize: 15,
-    lineHeight: 22,
-    color: '#675B50',
+    color: colors.muted,
   },
   footer: {
     flexDirection: 'row',
@@ -141,12 +154,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E9DED0',
+    borderTopColor: colors.border,
   },
   price: {
     fontSize: 21,
     fontWeight: '800',
-    color: '#8D3728',
+    color: colors.accent,
   },
   currency: {
     fontSize: 12,
@@ -155,6 +168,6 @@ const styles = StyleSheet.create({
   detailLink: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#675B50',
+    color: colors.muted,
   },
 });

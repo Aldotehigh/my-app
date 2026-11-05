@@ -1,3 +1,5 @@
+import { usePreferences } from '../../context/PreferencesContext';
+import type { RestaurantColors } from '../../constants/restaurantColors';
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -5,15 +7,18 @@ import {
   Alert,
   Pressable,
   StyleSheet,
+  ScrollView,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { colors } from '../../constants/restaurantColors';
 import { login } from "../../utils/auth";
 import { saveToken } from "../../utils/tokenStorage";
 
 export default function LoginScreen() {
+  const { colors, t, isDark } = usePreferences();
+  const styles = createStyles(colors);
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,7 +26,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert("Error", "Por favor ingrese usuario y constraseña");
+      Alert.alert(t("Error"), t("Enter your username and password"));
       return;
     }
 
@@ -31,25 +36,26 @@ export default function LoginScreen() {
       await saveToken(token);
       router.replace("/(app)");
     } catch (error) {
-      Alert.alert("Error", "Usuario o constraseña incorrecta");
+      Alert.alert(t("Error"), t("Incorrect username or password"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
       <View style={styles.loginContainer}>
-        <Text style={styles.title}>Bienvenido al restaurante</Text>
+        <Text style={styles.title}>{t("Welcome to the restaurant")}</Text>
 
         <Text style={styles.subtitle}>
-          Ingresa tus datos para continuar
-        </Text>
+          {t("Enter your details to continue")}</Text>
 
-        <Text style={styles.label}>Usuario</Text>
+        <Text style={styles.label}>{t("Username")}</Text>
 
-        <TextInput
-          placeholder="Ingresa tu usuario"
+        <TextInput keyboardAppearance={isDark ? 'dark' : 'light'}
+          accessibilityLabel={t("Username")}
+          autoComplete="username"
+          placeholder={t("Enter your username")}
           placeholderTextColor={colors.muted}
           value={username}
           onChangeText={setUsername}
@@ -58,10 +64,12 @@ export default function LoginScreen() {
           autoCapitalize="none"
         />
 
-        <Text style={styles.label}>Contraseña</Text>
+        <Text style={styles.label}>{t("Password")}</Text>
 
         <TextInput
-          placeholder="Ingresa tu contraseña"
+          accessibilityLabel={t("Password")}
+          autoComplete="current-password"
+          placeholder={t("Enter your password")}
           placeholderTextColor={colors.muted}
           value={password}
           onChangeText={setPassword}
@@ -81,17 +89,18 @@ export default function LoginScreen() {
           {loading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={styles.buttonText}>Iniciar Sesión</Text>
+            <Text style={styles.buttonText}>{t("Sign in")}</Text>
           )}
         </Pressable>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: RestaurantColors) => StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
+    paddingVertical: 24,
     backgroundColor: colors.background,
     justifyContent: "center",
     paddingHorizontal: 28,
@@ -122,7 +131,8 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    height: 54,
+    minHeight: 54,
+    paddingVertical: 14,
     borderRadius: 12,
     borderColor: colors.border,
     borderWidth: 1,
@@ -134,7 +144,8 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 14,
     backgroundColor: colors.accent,
     borderRadius: 12,
     justifyContent: "center",

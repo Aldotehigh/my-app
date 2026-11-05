@@ -1,31 +1,42 @@
-import { Redirect, Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { colors } from '../../constants/restaurantColors';
-import { getToken } from '../../utils/tokenStorage';
+import { usePreferences } from '../../context/PreferencesContext';
+import { AuthProvider, useAuth } from '../../context/AuthContext';
+import { Stack, useRouter } from 'expo-router';
+import { ActivityIndicator, Button, Text, View } from 'react-native';
+import { deleteToken } from '../../utils/tokenStorage';
 
 export default function AppLayout() {
-  const [checking, setChecking] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  return (
+    <AuthProvider>
+      <AuthenticatedNavigator />
+    </AuthProvider>
+  );
+}
 
-    useEffect(() => {
-    (async () => {
-      const token = await getToken();
-      setIsLoggedIn(!!token);
-      setChecking(true);
-    })();
-  }, []);
+function AuthenticatedNavigator() {
+  const { colors, t, reduceMotion } = usePreferences();
+  const { user, loading, error, reloadUser } = useAuth();
+  const router = useRouter();
 
-  if (!checking) {
+  if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center'}}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16, backgroundColor: colors.background }}>
+        <ActivityIndicator color={colors.accent} />
+        <Text style={{ color: colors.text }}>{t('Loading profile...')}</Text>
       </View>
     );
   }
 
-  if (!isLoggedIn) {
-    return <Redirect href="/(auth)/login" />;
+  if (error || !user) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16, backgroundColor: colors.background }}>
+        <Text style={{ color: colors.text }}>{t('Could not load your profile. Check your connection or sign in again.')}</Text>
+        <Button color={colors.accent} title={t('Retry')} onPress={() => void reloadUser()} />
+        <Button color={colors.accent} title={t('Sign out')} onPress={async () => {
+          await deleteToken();
+          router.replace('/(auth)/login');
+        }} />
+      </View>
+    );
   }
 
   return (
@@ -36,12 +47,15 @@ export default function AppLayout() {
         headerTintColor: colors.accent,
         headerTitleStyle: { color: colors.text, fontWeight: '700' },
         headerShadowVisible: false,
+        animation: reduceMotion ? 'none' : 'default',
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Menú del restaurante' }} />
-      <Stack.Screen name="details" options={{ title: 'Detalles' }} />
-      <Stack.Screen name="favorites" options={{ title: 'Mis favoritos' }} />
-      <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
+      <Stack.Screen name="index" options={{ title: t("Restaurant menu") }} />
+      <Stack.Screen name="form" options={{ title: t('Manage dish') }} />
+      <Stack.Screen name="details" options={{ title: t("Details") }} />
+      <Stack.Screen name="favorites" options={{ title: t("My favorites") }} />
+      <Stack.Screen name="accessibility" options={{ title: t('Accessibility') }} />
+      <Stack.Screen name="settings" options={{ title: t("Settings") }} />
     </Stack>
   )
 }

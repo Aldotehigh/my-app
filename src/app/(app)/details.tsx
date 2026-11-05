@@ -1,3 +1,7 @@
+import { useAuth } from '../../context/AuthContext';
+import { announce } from '../../utils/announce';
+import { usePreferences } from '../../context/PreferencesContext';
+import type { RestaurantColors } from '../../constants/restaurantColors';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -10,22 +14,31 @@ import {
   Text,
   View,
 } from 'react-native';
-import { colors } from '../../constants/restaurantColors';
 import {
   deleteCard,
   getCard,
   getFavoriteStatus,
   setCardFavorite,
+  updateCardAvailability,
 } from '../../services/cards';
 import type { CardItem } from '../../types/CardItem';
 
 export default function DetailScreen() {
+  const { colors, t } = usePreferences();
+  const styles = createStyles(colors);
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const [card, setCard] = useState<CardItem | null>(null);
   const router = useRouter();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isFavorite, setIsFavorite] = useState<boolean | null>(null);
   const [savingFavorite, setSavingFavorite] = useState(false);
+  const [savingAvailability, setSavingAvailability] = useState(false);
+  const canUpdateAvailability = Boolean(
+    user?.can_manage_menu || (user?.area && card?.category?.area === user.area),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -56,7 +69,7 @@ export default function DetailScreen() {
           if (isActive) {
             setCard(null);
             console.error('Could not load card details:', err);
-            Alert.alert('Error', 'No se pudo cargar el platillo');
+            Alert.alert(t("Error"), t("Could not load dish"));
           }
         } finally {
           if (isActive) setLoading(false);
@@ -68,7 +81,7 @@ export default function DetailScreen() {
       return () => {
         isActive = false;
       };
-    }, [id]),
+    }, [id, reloadKey, t]),
   );
 
   const handleToggleFavorite = async () => {
@@ -79,13 +92,28 @@ export default function DetailScreen() {
     try {
       const result = await setCardFavorite(Number(card.id), !isFavorite);
       setIsFavorite(result.is_favorite);
+      announce(t(result.is_favorite ? 'Added to favorites' : 'Removed from favorites'));
     } catch (err) {
       Alert.alert(
-        'Error',
-        err instanceof Error ? err.message : 'No se pudo actualizar el favorito',
+        t("Error"),
+        err instanceof Error ? err.message : t("Could not update favorite"),
       );
     } finally {
       setSavingFavorite(false);
+    }
+  };
+
+  const handleAvailabilityChange = async () => {
+    if (!card || !canUpdateAvailability || savingAvailability) return;
+    setSavingAvailability(true);
+    try {
+      const updated = await updateCardAvailability(Number(card.id), !card.is_available);
+      setCard(updated);
+      announce(t(updated.is_available ? 'Dish marked available' : 'Dish marked sold out'));
+    } catch (err) {
+      Alert.alert(t('Error'), err instanceof Error ? err.message : t('Could not update availability.'));
+    } finally {
+      setSavingAvailability(false);
     }
   };
 
@@ -99,10 +127,10 @@ export default function DetailScreen() {
   const handleDelete = () => {
     if (!card) return;
 
-    Alert.alert('Confirmar', '¿Seguro que quieres eliminar este platillo?', [
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert(t("Confirm"), t("Are you sure you want to delete this dish?"), [
+      { text: t("Cancel"), style: 'cancel' },
       {
-        text: 'Eliminar',
+        text: t("Delete"),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -110,8 +138,8 @@ export default function DetailScreen() {
             router.back();
           } catch (err) {
             Alert.alert(
-              'Error',
-              err instanceof Error ? err.message : 'No se pudo eliminar',
+              t("Error"),
+              err instanceof Error ? err.message : t("Could not delete"),
             );
           }
         },
@@ -122,7 +150,7 @@ export default function DetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
   }
@@ -130,7 +158,10 @@ export default function DetailScreen() {
   if (!card) {
     return (
       <View style={styles.centered}>
-        <Text>No se encontró el platillo</Text>
+        <Text style={{ color: colors.text }}>{t("Could not load this dish.")}</Text>
+        <Pressable accessibilityRole="button" style={styles.favoriteButton} onPress={() => setReloadKey((current) => current + 1)}>
+          <Text style={styles.favoriteText}>{t("Retry")}</Text>
+        </Pressable>
       </View>
     );
   }
@@ -138,57 +169,82 @@ export default function DetailScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {card.image ? (
-        <Image source={{ uri: card.image }} style={styles.image} />
+        <Image accessible={false} source={{ uri: card.image }} style={styles.image} />
       ) : null}
 
       <View style={styles.content}>
-        <Text style={styles.title}>{card.title}</Text>
+        <Text accessibilityRole="header" style={styles.title}>{card.title}</Text>
         <Text style={styles.price}>${card.price} MXN</Text>
         <Text style={styles.description}>{card.description}</Text>
 
         {isFavorite === null ? (
-          <Text style={styles.description}>
-            No se pudo consultar el estado del favorito.
-          </Text>
+          <View style={{ gap: 12 }}>
+            <Text style={styles.description}>
+              {t("Could not load favorite status.")}</Text>
+            <Pressable accessibilityRole="button" style={styles.favoriteButton} onPress={() => setReloadKey((current) => current + 1)}>
+              <Text style={styles.favoriteText}>{t("Retry")}</Text>
+            </Pressable>
+          </View>
         ) : (
           <Pressable
             onPress={handleToggleFavorite}
             disabled={savingFavorite}
             accessibilityRole="button"
-            accessibilityState={{ disabled: savingFavorite, busy: savingFavorite }}
+            accessibilityLabel={t(isFavorite ? 'Remove from favorites' : 'Save to favorites')}
+            accessibilityState={{ selected: isFavorite === true, disabled: savingFavorite, busy: savingFavorite }}
             style={styles.favoriteButton}
           >
             {savingFavorite ? (
               <ActivityIndicator color={colors.accent} />
             ) : (
               <Text style={styles.favoriteText}>
-                {isFavorite ? '♥ Quitar de favoritos' : '♡ Guardar en favoritos'}
+                {isFavorite ? t("♥ Remove from favorites") : t("♡ Save to favorites")}
               </Text>
             )}
           </Pressable>
         )}
 
+        <Text style={styles.description}>
+          {t(card.is_available ? 'Available' : 'Sold out')}
+        </Text>
+        {canUpdateAvailability ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: savingAvailability, busy: savingAvailability }}
+            disabled={savingAvailability}
+            onPress={handleAvailabilityChange}
+            style={styles.favoriteButton}
+          >
+            {savingAvailability ? <ActivityIndicator color={colors.accent} /> : (
+              <Text style={styles.favoriteText}>
+                {t(card.is_available ? 'Mark sold out' : 'Mark available')}
+              </Text>
+            )}
+          </Pressable>
+        ) : null}
+        {user?.can_manage_menu ? (
         <View style={styles.actions}>
           <Pressable
             onPress={handleEdit}
             style={[styles.button, styles.editButton]}
           >
-            <Text style={styles.buttonText}>Editar</Text>
+            <Text style={styles.buttonText}>{t("Edit")}</Text>
           </Pressable>
 
           <Pressable
             onPress={handleDelete}
             style={[styles.button, styles.deleteButton]}
           >
-            <Text style={styles.buttonText}>Eliminar</Text>
+            <Text style={styles.buttonText}>{t("Delete")}</Text>
           </Pressable>
         </View>
+        ) : null}
       </View>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: RestaurantColors) => StyleSheet.create({
   container: { flexGrow: 1, backgroundColor: colors.surface },
   image: { width: '100%', height: 250 },
   title: { fontSize: 30, fontWeight: '700', color: colors.text },
@@ -211,11 +267,14 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
     marginTop: 24,
   },
   button: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 130,
+    minHeight: 48,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
