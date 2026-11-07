@@ -88,8 +88,8 @@ export default function FormScreen() {
       return;
     }
 
-    if (!title.trim() || !description.trim() || !imageUri || !price.trim()) {
-      Alert.alert(t("Error"), t("All fields are required"));
+    if (!title.trim() || !description.trim() || !price.trim()) {
+      Alert.alert(t("Error"), t("Enter the title, description and price."));
       return;
     }
 
@@ -112,8 +112,7 @@ export default function FormScreen() {
       formData.append('price', normalizedPrice);
       formData.append('category_id', String(categoryId));
       formData.append('is_available', String(isAvailable));
-      const isNewImage = imageUri !== editing?.image;
-      if (isNewImage) {
+      if (imageUri && imageUri !== editing?.image) {
         if (Platform.OS === 'web') {
           const response = await fetch(imageUri);
           const blob = await response.blob();
@@ -218,7 +217,7 @@ export default function FormScreen() {
       <Text style={{ color: colors.text }}>
         {isAvailable ? t("Available") : t("Sold out")}
       </Text>
-      <Text style={styles.label}>{t("Image")}</Text>
+      <Text style={styles.label}>{t("Image (optional)")}</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t("Choose image")}

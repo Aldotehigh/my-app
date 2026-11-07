@@ -1,3 +1,5 @@
+import { OrderCustomizer } from '../../components/OrderCustomizer';
+import { ingredientLabels, presentationLabels } from '../../utils/cardPresentations';
 import { useAuth } from '../../context/AuthContext';
 import { announce } from '../../utils/announce';
 import { usePreferences } from '../../context/PreferencesContext';
@@ -35,6 +37,15 @@ export default function DetailScreen() {
   const [reloadKey, setReloadKey] = useState(0);
   const [isFavorite, setIsFavorite] = useState<boolean | null>(null);
   const [savingFavorite, setSavingFavorite] = useState(false);
+  const [selection, setSelection] = useState<{ cardId: string; optionId: number } | null>(null);
+  const presentations = card?.presentations ?? [];
+  const selected = presentations.find((option) =>
+    selection?.cardId === id && selection.optionId === option.id,
+  ) ?? presentations.find((option) => option.is_available) ?? presentations[0];
+  const hasIngredients = presentations.some((option) => option.presentation in ingredientLabels);
+  const optionLabels = { ...presentationLabels, ...ingredientLabels };
+  const image = selected?.image || card?.image || presentations.find((option) => option.image)?.image;
+  const isAvailable = selected?.is_available ?? card?.is_available ?? false;
   const [savingAvailability, setSavingAvailability] = useState(false);
   const canUpdateAvailability = Boolean(
     user?.can_manage_menu || (user?.area && card?.category?.area === user.area),
@@ -107,8 +118,16 @@ export default function DetailScreen() {
     if (!card || !canUpdateAvailability || savingAvailability) return;
     setSavingAvailability(true);
     try {
-      const updated = await updateCardAvailability(Number(card.id), !card.is_available);
-      setCard(updated);
+      const optionId = selected?.id ?? Number(card.id);
+      const updated = await updateCardAvailability(optionId, !isAvailable);
+      if (selected) setSelection({ cardId: id, optionId });
+      setCard({
+        ...card,
+        is_available: optionId === Number(card.id) ? updated.is_available : card.is_available,
+        presentations: card.presentations?.map((option) =>
+          option.id === optionId ? { ...option, is_available: updated.is_available } : option,
+        ),
+      });
       announce(t(updated.is_available ? 'Dish marked available' : 'Dish marked sold out'));
     } catch (err) {
       Alert.alert(t('Error'), err instanceof Error ? err.message : t('Could not update availability.'));
@@ -118,14 +137,28 @@ export default function DetailScreen() {
   };
 
   const handleEdit = () => {
+    if (!card) return;
+    const editableCard = selected ? {
+      ...card,
+      ...selected,
+      id: String(selected.id),
+      image: selected.image ?? '',
+      description: selected.description ?? '',
+    } : card;
     router.push({
       pathname: '/form',
-      params: { card: JSON.stringify(card) },
+      params: { card: JSON.stringify(editableCard) },
     });
   };
 
   const handleDelete = () => {
     if (!card) return;
+
+    const optionId = selected?.id ?? Number(card.id);
+    if (presentations.length > 1 && optionId === Number(card.id)) {
+      Alert.alert(t("Error"), t("Remove the linked presentations before deleting the main item."));
+      return;
+    }
 
     Alert.alert(t("Confirm"), t("Are you sure you want to delete this dish?"), [
       { text: t("Cancel"), style: 'cancel' },
@@ -134,8 +167,12 @@ export default function DetailScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteCard(Number(card.id));
-            router.back();
+            await deleteCard(optionId);
+            if (optionId === Number(card.id)) {
+              router.back();
+            } else {
+              setReloadKey((current) => current + 1);
+            }
           } catch (err) {
             Alert.alert(
               t("Error"),
@@ -168,14 +205,50 @@ export default function DetailScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {card.image ? (
-        <Image accessible={false} source={{ uri: card.image }} style={styles.image} />
+      {image ? (
+        <Image accessible={false} source={{ uri: image }} style={styles.image} />
       ) : null}
 
       <View style={styles.content}>
-        <Text accessibilityRole="header" style={styles.title}>{card.title}</Text>
-        <Text style={styles.price}>${card.price} MXN</Text>
-        <Text style={styles.description}>{card.description}</Text>
+        <Text accessibilityRole="header" style={styles.title}>{card.display_title ?? card.title}</Text>
+        {presentations.length > 1 ? (
+          <View style={styles.presentationList}>
+            <Text accessibilityRole="header" style={styles.presentationLabel}>{t(hasIngredients ? 'Choose an ingredient' : 'Presentation')}</Text>
+            {presentations.map((option) => {
+              const checked = selected?.id === option.id;
+              return (
+                <Pressable
+                  key={option.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked, disabled: savingAvailability }}
+                  disabled={savingAvailability}
+                  onPress={() => setSelection({ cardId: id, optionId: option.id })}
+                  style={[styles.presentationOption, checked && styles.presentationSelected]}
+                >
+                  <Text style={styles.presentationLabel}>
+                    {checked ? '✓ ' : ''}{t(optionLabels[option.presentation])}
+                  </Text>
+                  <Text style={styles.description}>
+                    ${option.price} MXN{option.is_available ? '' : ' · ' + t('Sold out')}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+        <Text style={styles.price}>${selected?.price ?? card.price} MXN</Text>
+        <Text style={styles.description}>{selected?.description || card.description}</Text>
+
+        {user?.role === 'customer' && isAvailable && card.category ? (
+          <OrderCustomizer
+            key={selected?.id ?? card.id}
+            cardId={selected?.id ?? Number(card.id)}
+            title={selected?.title ?? card.title}
+            price={selected?.price ?? card.price}
+            allowedRemovals={card.allowed_removals ?? []}
+            orderChoice={card.order_choice}
+          />
+        ) : null}
 
         {isFavorite === null ? (
           <View style={{ gap: 12 }}>
@@ -205,7 +278,7 @@ export default function DetailScreen() {
         )}
 
         <Text style={styles.description}>
-          {t(card.is_available ? 'Available' : 'Sold out')}
+          {t(isAvailable ? 'Available' : 'Sold out')}
         </Text>
         {canUpdateAvailability ? (
           <Pressable
@@ -217,7 +290,7 @@ export default function DetailScreen() {
           >
             {savingAvailability ? <ActivityIndicator color={colors.accent} /> : (
               <Text style={styles.favoriteText}>
-                {t(card.is_available ? 'Mark sold out' : 'Mark available')}
+                {t(isAvailable ? 'Mark sold out' : 'Mark available')}
               </Text>
             )}
           </Pressable>
@@ -246,7 +319,12 @@ export default function DetailScreen() {
 
 const createStyles = (colors: RestaurantColors) => StyleSheet.create({
   container: { flexGrow: 1, backgroundColor: colors.surface },
-  image: { width: '100%', height: 250 },
+  image: {
+    width: '100%',
+    height: 250,
+    resizeMode: 'cover',
+    backgroundColor: colors.surface,
+  },
   title: { fontSize: 30, fontWeight: '700', color: colors.text },
   description: { fontSize: 16, lineHeight: 24, color: colors.muted },
   content: {
@@ -254,6 +332,16 @@ const createStyles = (colors: RestaurantColors) => StyleSheet.create({
     gap: 12,
   },
   price: { color: colors.accent, fontSize: 22, fontWeight: '700' },
+  presentationList: { gap: 8 },
+  presentationOption: {
+    minHeight: 48,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.muted,
+    borderRadius: 8,
+  },
+  presentationSelected: { borderColor: colors.accent, backgroundColor: colors.soft },
+  presentationLabel: { color: colors.text, fontWeight: '600', fontSize: 16 },
   favoriteButton: {
     padding: 14,
     alignItems: 'center',

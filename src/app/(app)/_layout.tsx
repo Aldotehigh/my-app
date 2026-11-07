@@ -1,3 +1,4 @@
+import { CartProvider } from '../../context/CartContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import { AuthProvider, useAuth } from '../../context/AuthContext';
 import { Stack, useRouter } from 'expo-router';
@@ -40,6 +41,7 @@ function AuthenticatedNavigator() {
   }
 
   return (
+    <CartProvider key={user.username}>
     <Stack
       screenOptions={{
         contentStyle: { backgroundColor: colors.background },
@@ -50,12 +52,14 @@ function AuthenticatedNavigator() {
         animation: reduceMotion ? 'none' : 'default',
       }}
     >
-      <Stack.Screen name="index" options={{ title: t("Restaurant menu") }} />
+      <Stack.Screen name="index" options={{ title: t(user.can_manage_menu ? "Manage menu" : user.area === "kitchen" ? "Kitchen" : user.area === "bar" ? "Bar" : "Restaurant menu") }} />
       <Stack.Screen name="form" options={{ title: t('Manage dish') }} />
       <Stack.Screen name="details" options={{ title: t("Details") }} />
       <Stack.Screen name="favorites" options={{ title: t("My favorites") }} />
       <Stack.Screen name="accessibility" options={{ title: t('Accessibility') }} />
       <Stack.Screen name="settings" options={{ title: t("Settings") }} />
+      <Stack.Screen name="table-orders" options={{ title: t("Orders") }} />
     </Stack>
+    </CartProvider>
   )
 }

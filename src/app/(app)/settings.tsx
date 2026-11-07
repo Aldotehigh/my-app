@@ -1,3 +1,5 @@
+import { useAuth } from '../../context/AuthContext';
+import { ROLE_LABELS } from '../../types/CurrentUser';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
@@ -6,6 +8,7 @@ import { PAGE_SIZES } from '../../utils/menuPreferences';
 import type { Language, PageSize, ThemeMode } from '../../utils/preferenceStorage';
 
 export default function SettingsScreen() {
+  const { user, reloadUser } = useAuth();
   const { colors, t, preferences, savePreferences, screenReaderEnabled, reduceMotion } = usePreferences();
   const [themeMode, setThemeMode] = useState<ThemeMode>(preferences.themeMode);
   const [language, setLanguage] = useState<Language>(preferences.language);
@@ -120,6 +123,22 @@ export default function SettingsScreen() {
       <Pressable onPress={handleSave} disabled={saving || !hasChanges} accessibilityRole="button" accessibilityState={{ disabled: saving || !hasChanges, busy: saving }} style={[styles.save, (saving || !hasChanges) && styles.disabled]}>
         {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.saveText}>{t('Save')}</Text>}
       </Pressable>
+      {user ? (
+        <View style={styles.section}>
+          <Text accessibilityRole="header" style={styles.title}>{t('Account')}</Text>
+          <Text style={styles.optionText}>{user.username}</Text>
+          <Text style={styles.description}>{t(ROLE_LABELS[user.role])}</Text>
+          <Pressable
+            accessibilityRole="button"
+            disabled={saving || hasChanges}
+            accessibilityState={{ disabled: saving || hasChanges }}
+            onPress={reloadUser}
+            style={[styles.option, (saving || hasChanges) && styles.disabled]}
+          >
+            <Text style={styles.optionText}>{t('Refresh profile')}</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }

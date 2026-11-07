@@ -16,6 +16,7 @@ interface CardFilters {
   availableOnly: boolean;
   page: number;
   pageSize?: number;
+  area?: 'kitchen' | 'bar' | null;
 }
 
 export function getCardsPage(filters: CardFilters) {
@@ -23,6 +24,9 @@ export function getCardsPage(filters: CardFilters) {
   if (filters.pageSize !== undefined) {
   params.push(`page_size=${filters.pageSize}`);
 }
+  if (filters.area) {
+    params.push(`category__area=${filters.area}`);
+  }
   const search = filters.search.trim();
 
   if (search) {

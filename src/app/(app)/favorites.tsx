@@ -1,3 +1,4 @@
+import { getCardSummary } from '../../utils/cardPresentations';
 import { usePreferences } from '../../context/PreferencesContext';
 import type { RestaurantColors } from '../../constants/restaurantColors';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -132,11 +133,8 @@ export default function FavoritesScreen() {
       }
       renderItem={({ item }) => (
         <Card
-          title={item.title}
-          price={item.price}
-          image={item.image}
+          {...getCardSummary(item)}
           description={item.description}
-          isAvailable={item.is_available}
           onPress={() =>
             router.push({
               pathname: '/details',

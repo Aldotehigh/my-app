@@ -9,6 +9,7 @@ interface CardProps {
   description: string | null;
   backgroundColor?: string;
   price: string;
+  showStartingPrice?: boolean;
   isAvailable: boolean;
   onPress?: () => void;
 }
@@ -19,6 +20,7 @@ export default function Card({
   description,
   backgroundColor,
   price,
+  showStartingPrice = false,
   isAvailable,
   onPress,
 }: CardProps) {
@@ -36,7 +38,7 @@ export default function Card({
       accessibilityLabel={[
         title,
         description,
-        `${t('Price')}: ${price} ${t('Mexican pesos')}`,
+        `${t(showStartingPrice ? 'From' : 'Price')}: ${price} ${t('Mexican pesos')}`,
         t(isAvailable ? 'Available' : 'Sold out'),
       ].filter(Boolean).join('. ')}
       accessibilityRole={onPress ? 'button' : undefined}
@@ -83,7 +85,7 @@ export default function Card({
 
         <View style={styles.footer}>
           <Text style={styles.price}>
-            ${price} <Text style={styles.currency}>MXN</Text>
+            {showStartingPrice ? t('From') + ' ' : ''}${price} <Text style={styles.currency}>MXN</Text>
           </Text>
 
           {onPress ? <Text style={styles.detailLink}>{t("View details ›")}</Text> : null}
@@ -108,7 +110,7 @@ const createStyles = (colors: RestaurantColors) => StyleSheet.create({
     width: '100%',
     aspectRatio: 16 / 9,
     resizeMode: 'cover',
-    backgroundColor: colors.border,
+    backgroundColor: colors.surface,
   },
   content: {
     padding: 18,
