@@ -8,6 +8,7 @@ interface AuthContextValue {
   loading: boolean;
   error: boolean;
   reloadUser: () => void;
+  updateUser: (user: CurrentUser) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -40,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, reloadUser }}>
+    <AuthContext.Provider value={{ user, loading, error, reloadUser, updateUser: setUser }}>
       {children}
     </AuthContext.Provider>
   );

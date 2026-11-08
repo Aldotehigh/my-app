@@ -16,7 +16,7 @@ interface CardFilters {
   availableOnly: boolean;
   page: number;
   pageSize?: number;
-  area?: 'kitchen' | 'bar' | null;
+  area?: 'kitchen' | 'bar' | 'sushi' | 'food' | null;
 }
 
 export function getCardsPage(filters: CardFilters) {
@@ -25,7 +25,7 @@ export function getCardsPage(filters: CardFilters) {
   params.push(`page_size=${filters.pageSize}`);
 }
   if (filters.area) {
-    params.push(`category__area=${filters.area}`);
+    params.push(filters.area === 'food' ? 'food_only=true' : `category__area=${filters.area}`);
   }
   const search = filters.search.trim();
 

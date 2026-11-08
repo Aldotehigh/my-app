@@ -33,11 +33,15 @@ export function getCardSummary(card: CardItem) {
     undefined,
   );
 
+  const mixPrices = card.order_profile?.groups
+    .find((group) => group.key === 'skewers')?.options
+    .flatMap((option) => option.price ? [Number(option.price)] : []) ?? [];
+
   return {
     title: card.display_title ?? card.title,
-    price: lowest?.price ?? card.price,
+    price: mixPrices.length ? Math.min(...mixPrices).toFixed(2) : lowest?.price ?? card.price,
     image: card.image || options.find((option) => option.image)?.image || '',
     isAvailable: options.length ? available.length > 0 : card.is_available,
-    showStartingPrice: options.length > 1,
+    showStartingPrice: options.length > 1 || Boolean(card.order_profile?.highest_price),
   };
 }

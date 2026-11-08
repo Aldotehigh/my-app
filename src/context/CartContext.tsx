@@ -9,6 +9,8 @@ export interface CartLine {
   removals: string[];
   selections: { id: string; label: string }[];
   allergy: string;
+  choices?: Record<string, string[]>;
+  course?: 'starter' | 'main' | 'dessert' | 'drink';
 }
 
 let nextLineId = 0;

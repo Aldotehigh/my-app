@@ -1,12 +1,15 @@
 export interface Category {
   id: number;
   name: string;
-  area: 'kitchen' | 'bar';
+  area: 'kitchen' | 'bar' | 'sushi';
 }
 
 export interface CardPresentation {
   id: number;
   title: string;
+  flavor?: string;
+  order_profile?: OrderProfile;
+  allowed_removals?: string[];
   presentation: 'full' | 'half' | 'glass' | 'bottle' | 'thin' | 'thick'
     | 'vegetables' | 'beef' | 'chicken' | 'white_fish' | 'shrimp' | 'octopus' | 'salmon' | 'ribeye' | 'combo'
     | 'gyo_beef' | 'ebi' | 'mixed';
@@ -22,7 +25,29 @@ export interface OrderChoice {
   options: { id: string; label: string }[];
 }
 
+export interface OrderOption extends OrderChoice {
+  min_count?: number;
+  warning?: string;
+  key: string;
+  optional: boolean;
+  distinct: boolean;
+  requires_ids?: string[];
+  options: { id: string; label: string; price?: string }[];
+}
+
+export interface OrderProfile {
+  groups: OrderOption[];
+  show_allergy: boolean;
+  show_removals: boolean;
+  highest_price: boolean;
+  notice: string;
+  bar: boolean;
+  alcohol_free?: boolean;
+  course: 'starter' | 'main' | 'dessert' | 'drink';
+}
+
 export interface CardItem {
+  order_profile?: OrderProfile;
   order_choice?: OrderChoice | null;
   display_title?: string;
   allowed_removals?: string[];

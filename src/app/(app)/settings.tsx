@@ -1,8 +1,9 @@
+import { deleteToken } from '../../utils/tokenStorage';
 import { useAuth } from '../../context/AuthContext';
 import { ROLE_LABELS } from '../../types/CurrentUser';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { usePreferences } from '../../context/PreferencesContext';
 import { PAGE_SIZES } from '../../utils/menuPreferences';
 import type { Language, PageSize, ThemeMode } from '../../utils/preferenceStorage';
@@ -16,6 +17,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const [highContrast, setHighContrast] = useState(preferences.highContrast);
   const [saving, setSaving] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const hasChanges = highContrast !== preferences.highContrast || themeMode !== preferences.themeMode || language !== preferences.language || pageSize !== preferences.pageSize;
 
   const handleSave = async () => {
@@ -27,6 +29,18 @@ export default function SettingsScreen() {
       Alert.alert(t('Error'), t('Could not save settings.'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (saving || signingOut) return;
+    setSigningOut(true);
+    try {
+      await deleteToken();
+      router.replace('/(auth)/login');
+    } catch {
+      Alert.alert(t('Error'), t('Could not sign out.'));
+      setSigningOut(false);
     }
   };
 
@@ -126,7 +140,11 @@ export default function SettingsScreen() {
       {user ? (
         <View style={styles.section}>
           <Text accessibilityRole="header" style={styles.title}>{t('Account')}</Text>
-          <Text style={styles.optionText}>{user.username}</Text>
+          {user.avatar ? <Image accessible={false} source={{ uri: user.avatar }} style={{ width: 72, height: 72, borderRadius: 36 }} /> : null}
+          <Text style={styles.optionText}>{[user.first_name, user.last_name].filter(Boolean).join(' ') || user.username}</Text>
+          <Pressable accessibilityRole="button" style={styles.option} disabled={saving} onPress={() => router.push('/profile')}>
+            <Text style={styles.optionText}>{t('Edit profile')}</Text>
+          </Pressable>
           <Text style={styles.description}>{t(ROLE_LABELS[user.role])}</Text>
           <Pressable
             accessibilityRole="button"
@@ -136,6 +154,18 @@ export default function SettingsScreen() {
             style={[styles.option, (saving || hasChanges) && styles.disabled]}
           >
             <Text style={styles.optionText}>{t('Refresh profile')}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('Sign out')}
+            accessibilityState={{ disabled: saving || signingOut, busy: signingOut }}
+            disabled={saving || signingOut}
+            onPress={handleLogout}
+            style={[styles.option, (saving || signingOut) && styles.disabled]}
+          >
+            {signingOut ? <ActivityIndicator color={colors.accent} /> : (
+              <Text style={[styles.optionText, { color: colors.accent, fontWeight: '700' }]}>{t('Sign out')}</Text>
+            )}
           </Pressable>
         </View>
       ) : null}

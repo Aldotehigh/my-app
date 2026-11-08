@@ -92,6 +92,12 @@ export default function LoginScreen() {
             <Text style={styles.buttonText}>{t("Sign in")}</Text>
           )}
         </Pressable>
+        <Pressable accessibilityRole="button" disabled={loading}
+          onPress={() => router.push('/(auth)/register')}
+          style={{ minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 12 }}
+        >
+          <Text style={{ color: colors.accent, fontWeight: '700' }}>{t('Create your account')}</Text>
+        </Pressable>
       </View>
     </ScrollView>
   );

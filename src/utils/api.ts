@@ -2,7 +2,7 @@ import { getToken } from './tokenStorage';
 import { translate as t } from './translations';
 
 /*const API_URL = 'http://127.0.0.1:8000';*/
-export const API_URL = 'http://192.168.1.70:8000';
+export const API_URL = 'http://192.168.100.5:8000';
 
 export async function fetchWithAuth<T>(
   endpoint: string,
@@ -44,6 +44,12 @@ export async function fetchWithAuth<T>(
       throw new Error(t("You do not have permission to perform this action."));
     }
 
+    const failure = await response.json().catch(() => null);
+    if (typeof failure?.detail === 'string') {
+      throw new Error(t(failure.detail));
+    }
+    const fieldMessage = Object.values(failure ?? {}).flat().find((value) => typeof value === 'string');
+    if (typeof fieldMessage === 'string') throw new Error(t(fieldMessage));
     throw new Error(`${t('Server error')}: ${response.status}`);
   }
 

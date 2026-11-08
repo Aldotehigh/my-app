@@ -32,6 +32,7 @@ export default function FormScreen() {
   const editing: CardItem | null = card ? JSON.parse(card) : null;
   const router = useRouter();
   const { user } = useAuth();
+  const canEditMenu = Boolean(user?.can_edit_menu ?? user?.can_manage_menu);
 
   const [title, setTitle] = useState(editing?.title ?? '');
   const [description, setDescription] = useState(editing?.description ?? '');
@@ -50,14 +51,14 @@ export default function FormScreen() {
     setCategoriesLoading(true);
     setCategoryError(false);
     getCategories().then((data) => {
-      if (active) setCategories(data);
+      if (active) setCategories(user?.area ? data.filter((category) => category.area === user.area) : data);
     }).catch(() => {
       if (active) setCategoryError(true);
     }).finally(() => {
       if (active) setCategoriesLoading(false);
     });
     return () => { active = false; };
-  }, [categoryReloadKey]);
+  }, [categoryReloadKey, user?.area]);
 
 
   const pickImage = async () => {
@@ -81,7 +82,7 @@ export default function FormScreen() {
   };
 
   const handleSave = async () => {
-    if (saving || !user?.can_manage_menu || categoriesLoading || categoryError) return;
+    if (saving || !canEditMenu || categoriesLoading || categoryError) return;
 
     if (categoryId === null) {
       Alert.alert(t('Error'), t('Select a category.'));
@@ -149,10 +150,10 @@ export default function FormScreen() {
     }
   };
 
-  if (!user?.can_manage_menu) {
+  if (!canEditMenu) {
     return (
       <View style={{ flex: 1, padding: 24, justifyContent: 'center', gap: 16, backgroundColor: colors.background }}>
-        <Text style={{ color: colors.text }}>{t('Only administrators can manage dishes.')}</Text>
+        <Text style={{ color: colors.text }}>{t('You cannot edit items in this area.')}</Text>
         <Button color={colors.accent} title={t('Back to menu')} onPress={() => router.replace('/(app)')} />
       </View>
     );
@@ -165,7 +166,7 @@ export default function FormScreen() {
         value={title}
         onChangeText={setTitle}
         accessibilityLabel={t("Title")}
-        placeholder={t("Example: Grilled salmon")}
+        placeholder={t(user?.area === 'bar' ? "Example: drink of the day" : "Example: Grilled salmon")}
         style={styles.input}
         editable={!saving}
       />
@@ -175,7 +176,7 @@ export default function FormScreen() {
         value={description}
         onChangeText={setDescription}
         accessibilityLabel={t("Description")}
-        placeholder={t("Describe the dish...")}
+        placeholder={t(user?.area === 'bar' ? "Describe the drink..." : "Describe the dish...")}
         style={[styles.input, styles.textArea]}
         multiline
         numberOfLines={4}

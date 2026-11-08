@@ -33,6 +33,7 @@ export default function DetailScreen() {
   const [card, setCard] = useState<CardItem | null>(null);
   const router = useRouter();
   const { user } = useAuth();
+  const isCustomer = user?.role === 'customer';
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [isFavorite, setIsFavorite] = useState<boolean | null>(null);
@@ -42,11 +43,18 @@ export default function DetailScreen() {
   const selected = presentations.find((option) =>
     selection?.cardId === id && selection.optionId === option.id,
   ) ?? presentations.find((option) => option.is_available) ?? presentations[0];
+  const flavors = [...new Set(presentations.map((option) => option.flavor).filter((value): value is string => Boolean(value)))];
+  const visiblePresentations = flavors.length
+    ? presentations.filter((option) => option.flavor === selected?.flavor)
+    : presentations;
   const hasIngredients = presentations.some((option) => option.presentation in ingredientLabels);
   const optionLabels = { ...presentationLabels, ...ingredientLabels };
   const image = selected?.image || card?.image || presentations.find((option) => option.image)?.image;
   const isAvailable = selected?.is_available ?? card?.is_available ?? false;
   const [savingAvailability, setSavingAvailability] = useState(false);
+  const canEditMenu = Boolean(user?.can_manage_menu || (
+    user?.can_edit_menu && user.area === card?.category?.area
+  ));
   const canUpdateAvailability = Boolean(
     user?.can_manage_menu || (user?.area && card?.category?.area === user.area),
   );
@@ -65,7 +73,7 @@ export default function DetailScreen() {
 
           setCard(fresh);
 
-          try {
+          if (isCustomer) try {
             const favoriteStatus = await getFavoriteStatus(Number(id));
 
             if (isActive) {
@@ -92,7 +100,7 @@ export default function DetailScreen() {
       return () => {
         isActive = false;
       };
-    }, [id, reloadKey, t]),
+    }, [id, reloadKey, t, isCustomer]),
   );
 
   const handleToggleFavorite = async () => {
@@ -211,10 +219,32 @@ export default function DetailScreen() {
 
       <View style={styles.content}>
         <Text accessibilityRole="header" style={styles.title}>{card.display_title ?? card.title}</Text>
-        {presentations.length > 1 ? (
+        {flavors.length ? (
+          <View style={styles.presentationList}>
+            <Text accessibilityRole="header" style={styles.presentationLabel}>{t('Choose an ingredient')}</Text>
+            {flavors.map((flavor) => {
+              const matching = presentations.filter((option) => option.flavor === flavor);
+              const preferred = matching.find((option) => option.presentation === selected?.presentation && option.is_available)
+                ?? matching.find((option) => option.is_available) ?? matching[0];
+              return (
+                <Pressable
+                  key={flavor}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected?.flavor === flavor, disabled: savingAvailability }}
+                  disabled={savingAvailability}
+                  onPress={() => setSelection({ cardId: id, optionId: preferred.id })}
+                  style={[styles.presentationOption, selected?.flavor === flavor && styles.presentationSelected]}
+                >
+                  <Text style={styles.presentationLabel}>{selected?.flavor === flavor ? '✓ ' : ''}{flavor}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+        {visiblePresentations.length > 1 ? (
           <View style={styles.presentationList}>
             <Text accessibilityRole="header" style={styles.presentationLabel}>{t(hasIngredients ? 'Choose an ingredient' : 'Presentation')}</Text>
-            {presentations.map((option) => {
+            {visiblePresentations.map((option) => {
               const checked = selected?.id === option.id;
               return (
                 <Pressable
@@ -226,7 +256,7 @@ export default function DetailScreen() {
                   style={[styles.presentationOption, checked && styles.presentationSelected]}
                 >
                   <Text style={styles.presentationLabel}>
-                    {checked ? '✓ ' : ''}{t(optionLabels[option.presentation])}
+                    {checked ? '✓ ' : ''}{t(optionLabels[option.presentation] ?? option.title)}
                   </Text>
                   <Text style={styles.description}>
                     ${option.price} MXN{option.is_available ? '' : ' · ' + t('Sold out')}
@@ -245,12 +275,14 @@ export default function DetailScreen() {
             cardId={selected?.id ?? Number(card.id)}
             title={selected?.title ?? card.title}
             price={selected?.price ?? card.price}
-            allowedRemovals={card.allowed_removals ?? []}
+            allowedRemovals={selected?.allowed_removals ?? card.allowed_removals ?? []}
+            keepChoosing={flavors.length > 0}
             orderChoice={card.order_choice}
+            orderProfile={selected?.order_profile ?? card.order_profile}
           />
         ) : null}
 
-        {isFavorite === null ? (
+        {isCustomer ? (isFavorite === null ? (
           <View style={{ gap: 12 }}>
             <Text style={styles.description}>
               {t("Could not load favorite status.")}</Text>
@@ -275,7 +307,7 @@ export default function DetailScreen() {
               </Text>
             )}
           </Pressable>
-        )}
+        )) : null}
 
         <Text style={styles.description}>
           {t(isAvailable ? 'Available' : 'Sold out')}
@@ -295,7 +327,7 @@ export default function DetailScreen() {
             )}
           </Pressable>
         ) : null}
-        {user?.can_manage_menu ? (
+        {canEditMenu ? (
         <View style={styles.actions}>
           <Pressable
             onPress={handleEdit}
@@ -304,12 +336,12 @@ export default function DetailScreen() {
             <Text style={styles.buttonText}>{t("Edit")}</Text>
           </Pressable>
 
-          <Pressable
+          {user?.can_manage_menu ? <Pressable
             onPress={handleDelete}
             style={[styles.button, styles.deleteButton]}
           >
             <Text style={styles.buttonText}>{t("Delete")}</Text>
-          </Pressable>
+          </Pressable> : null}
         </View>
         ) : null}
       </View>

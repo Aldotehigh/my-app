@@ -1,9 +1,11 @@
+import { restaurantBrand } from '../constants/restaurantBrand';
 import { usePreferences } from '../context/PreferencesContext';
 import type { RestaurantColors } from '../constants/restaurantColors';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 interface CardProps {
+  compact?: boolean;
   title: string;
   image: string | null;
   description: string | null;
@@ -15,6 +17,7 @@ interface CardProps {
 }
 
 export default function Card({
+  compact = false,
   title,
   image,
   description,
@@ -53,12 +56,16 @@ export default function Card({
         <Image
           accessible={false}
           source={{ uri: image }}
-          style={styles.image}
+          style={[styles.image, compact && styles.compactImage]}
           onError={() => setFailedImage(image)}
         />
-      ) : null}
+      ) : (
+        <View style={[styles.image, styles.placeholder]}>
+          <Text style={styles.placeholderText}>❖</Text>
+        </View>
+      )}
 
-      <View style={styles.content}>
+      <View style={[styles.content, compact && styles.compactContent]}>
         <View
           style={[
             styles.badge,
@@ -75,20 +82,20 @@ export default function Card({
           </Text>
         </View>
 
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, compact && styles.compactTitle]}>{title}</Text>
 
         {description?.trim() ? (
-          <Text style={styles.description} numberOfLines={fontScale > 1.2 ? undefined : 2}>
+          <Text style={[styles.description, compact && styles.compactDescription]} numberOfLines={fontScale > 1.2 ? undefined : 2}>
             {description}
           </Text>
         ) : null}
 
         <View style={styles.footer}>
-          <Text style={styles.price}>
+          <Text style={[styles.price, compact && styles.compactPrice]}>
             {showStartingPrice ? t('From') + ' ' : ''}${price} <Text style={styles.currency}>MXN</Text>
           </Text>
 
-          {onPress ? <Text style={styles.detailLink}>{t("View details ›")}</Text> : null}
+          {onPress ? <Text accessible={false} style={compact ? styles.openCircle : styles.detailLink}>{compact ? '↗' : t("View details ›")}</Text> : null}
         </View>
       </View>
     </Pressable>
@@ -98,11 +105,19 @@ export default function Card({
 const createStyles = (colors: RestaurantColors) => StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
   },
+  compactImage: { aspectRatio: 1.5 },
+  compactContent: { padding: 11, gap: 7 },
+  compactTitle: { fontSize: 18, lineHeight: 23, fontWeight: '600' },
+  compactDescription: { fontSize: 12, lineHeight: 17 },
+  compactPrice: { fontSize: 17, fontWeight: '600', fontFamily: restaurantBrand.serif },
+  placeholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.soft },
+  placeholderText: { color: colors.accent, fontSize: 35 },
+  openCircle: { width: 28, height: 28, textAlign: 'center', lineHeight: 27, borderRadius: 14, overflow: 'hidden', color: colors.onAccent, backgroundColor: colors.accent, fontSize: 19 },
   pressed: {
     opacity: 0.85,
   },
@@ -142,6 +157,7 @@ const createStyles = (colors: RestaurantColors) => StyleSheet.create({
     fontSize: 23,
     fontWeight: '700',
     color: colors.text,
+    fontFamily: restaurantBrand.serif,
   },
   description: {
     fontSize: 15,

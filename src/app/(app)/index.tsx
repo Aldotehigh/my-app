@@ -1,3 +1,7 @@
+import { PromotionNotice } from '../../components/PromotionCalendar';
+import { RestaurantMasthead } from '../../components/RestaurantMasthead';
+import { FeaturedDish } from '../../components/FeaturedDish';
+import { restaurantBrand } from '../../constants/restaurantBrand';
 import { getCardSummary } from '../../utils/cardPresentations';
 import { useAuth } from '../../context/AuthContext';
 import { announce } from '../../utils/announce';
@@ -15,6 +19,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import Card from '../../components/card';
 import CategorySelector from '../../components/CategorySelector';
@@ -23,17 +28,21 @@ import { getCategories } from '../../services/categories';
 import type { CardItem, Category } from '../../types/CardItem';
 import type { PageSize } from '../../utils/menuPreferences';
 import { getMenuPageSize } from '../../utils/menuPreferences';
-import { deleteToken } from '../../utils/tokenStorage';
 
 export default function HomeScreen() {
   const { colors, t, isDark } = usePreferences();
   const styles = createStyles(colors);
+  const { width, fontScale } = useWindowDimensions();
+  const columns = width >= 360 && fontScale <= 1.2 ? 2 : 1;
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const router = useRouter();
   const { user } = useAuth();
   const staffArea = user?.area ?? null;
-  const [selectedArea, setSelectedArea] = useState<Category['area'] | null>(null);
+  const [selectedArea, setSelectedArea] = useState<Category['area'] | 'food' | null>(null);
   const area = staffArea ?? selectedArea;
+  const canEditMenu = Boolean(user?.can_edit_menu ?? user?.can_manage_menu);
+  const isCustomer = user?.role === 'customer';
   const isAdmin = user?.can_manage_menu === true;
   const [cards, setCards] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,11 +57,6 @@ export default function HomeScreen() {
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-
-  const handleLogout = async () => {
-    await deleteToken();
-    router.replace('/(auth)/login');
-  };
 
   const fetchCards = useCallback(
     async (isCurrent: () => boolean) => {
@@ -136,6 +140,12 @@ export default function HomeScreen() {
     setReloadKey((current) => current + 1);
   };
 
+  const featured = isCustomer && page === 1 && !search && categoryId === null && !area
+    ? cards.find((item) => Boolean(getCardSummary(item).image) && getCardSummary(item).isAvailable) : undefined;
+  const openDetails = (item: CardItem) => router.push({
+    pathname: '/details', params: { id: String(item.id) },
+  });
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -159,6 +169,9 @@ export default function HomeScreen() {
   return (
     <>
       <FlatList
+        key={columns}
+        numColumns={columns}
+        columnWrapperStyle={columns > 1 ? styles.gridRow : undefined}
         data={cards}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.listContent}
@@ -168,39 +181,47 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View style={styles.header}>
+            <View style={styles.masthead}><RestaurantMasthead /></View>
             <Text style={styles.eyebrow}>
               {t(isAdmin || staffArea ? 'RESTAURANT OPERATIONS' : 'RESTAURANT MENU')}
             </Text>
             <Text accessibilityRole="header" style={styles.heading}>
-              {t(isAdmin ? 'Manage menu' : staffArea === 'kitchen' ? 'Kitchen' : staffArea === 'bar' ? 'Bar' : 'Our menu')}
+              {t(isAdmin ? 'Manage menu' : staffArea === 'kitchen' ? 'Kitchen' : staffArea === 'bar' ? 'Drinks bar' : staffArea === 'sushi' ? 'Sushi' : 'Our menu')}
             </Text>
             <Text style={styles.subtitle}>
               {t(isAdmin ? 'Create dishes and keep the menu up to date.' : staffArea
                 ? 'Open an item to change its availability.'
                 : 'Find your next favorite dish.')}
             </Text>
-            {isAdmin ? (
+            {canEditMenu ? (
               <Pressable accessibilityRole="button" style={styles.primaryAction} onPress={() => router.push('/form')}>
-                <Text style={styles.primaryActionText}>{t('New dish')}</Text>
+                <Text style={styles.primaryActionText}>{t(staffArea === 'bar' ? 'New drink' : 'New dish')}</Text>
               </Pressable>
             ) : null}
-            <View style={styles.quickLinks}>
-              <Pressable accessibilityRole="button" style={styles.quickLink} onPress={() => router.push('/table-orders')}>
-                <Text style={styles.quickLinkText}>{t('Orders')}</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" style={styles.quickLink} onPress={() => router.push('/(app)/favorites')}>
-                <Text style={styles.quickLinkText}>{t("♥ My favorites")}</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" style={styles.quickLink} onPress={() => router.push('/(app)/settings')}>
-                <Text style={styles.quickLinkText}>{t("Settings")}</Text>
-              </Pressable>
+            <View style={styles.searchRow}>
+            <Text accessible={false} style={styles.searchIcon}>⌕</Text>
+            <TextInput keyboardAppearance={isDark ? 'dark' : 'light'}
+              value={searchInput}
+              onChangeText={setSearchInput}
+              onSubmitEditing={handleSearch}
+              placeholder={t("Search dishes")}
+              placeholderTextColor={colors.muted}
+              accessibilityLabel={t("Search dishes")}
+              returnKeyType="search"
+              style={styles.searchInput}
+            />
+
+            <Pressable accessibilityRole="button" accessibilityLabel={t('Search')} onPress={handleSearch} style={styles.searchAction}>
+              <Text style={{ color: colors.accent, fontWeight: '700' }}>→</Text>
+            </Pressable>
             </View>
+
 
             {staffArea === null ? (
               <View style={styles.areaFilters}>
                 {([
                   { value: null, label: 'All items' },
-                  { value: 'kitchen', label: 'Food' },
+                  { value: 'food', label: 'Food' },
                   { value: 'bar', label: 'Drinks' },
                 ] as const).map(({ value, label }) => {
                   const selected = selectedArea === value;
@@ -226,25 +247,27 @@ export default function HomeScreen() {
               </View>
             ) : null}
 
-            <TextInput keyboardAppearance={isDark ? 'dark' : 'light'}
-              value={searchInput}
-              onChangeText={setSearchInput}
-              onSubmitEditing={handleSearch}
-              placeholder={t("Search dishes")}
-              placeholderTextColor={colors.muted}
-              accessibilityLabel={t("Search dishes")}
-              returnKeyType="search"
-              style={styles.searchInput}
-            />
-
-            <Button color={colors.accent} title={t("Search")} onPress={handleSearch} />
-
+            <Pressable accessibilityRole="button"
+              accessibilityState={{ expanded: filtersOpen }}
+              onPress={() => setFiltersOpen((current) => !current)}
+              style={styles.filtersToggle}
+            >
+              <Text style={styles.filterLabel}>{t('Filters')} · {t('Category')} / {t('Availability')}</Text>
+              <Text style={styles.filterLabel}>{filtersOpen ? '−' : '+'}</Text>
+            </Pressable>
+            {filtersOpen || categoryId !== null || availableOnly ? (
+              <View style={styles.filtersPanel}>
             <CategorySelector
-              categories={area ? categories.filter((category) => category.area === area) : categories}
+              categories={area ? categories.filter((category) => (area === 'food' ? category.area !== 'bar' : category.area === area)) : categories}
               selectedId={categoryId}
               onSelect={handleCategoryChange}
             />
 
+            {categories.find((category) => category.id === categoryId)?.name === 'Kushi Age' ? (
+              <Text style={{ color: colors.accent, padding: 12, backgroundColor: colors.soft, borderRadius: 10 }}>
+                {t('Three different skewers. The highest selected price applies.')}
+              </Text>
+            ) : null}
             <View style={styles.availabilityRow}>
               <Text style={{ color: colors.text }}>{t("Available only")}</Text>
               <Switch
@@ -253,6 +276,15 @@ export default function HomeScreen() {
                 trackColor={{ true: colors.olive }}
                 onValueChange={handleAvailabilityChange}
               />
+            </View>
+              </View>
+            ) : null}
+            {featured ? <FeaturedDish key={featured.id} card={featured} onPress={() => openDetails(featured)} /> : null}
+            {isAdmin ? <Button title={t('Reservations')} color={colors.accent} onPress={() => router.push('/reservations')} /> : null}
+            {isCustomer && area !== 'bar' ? <PromotionNotice /> : null}
+            <View style={styles.sectionHeading}>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>{t('Explore our menu')}</Text>
+              <Text style={styles.sectionNote}>{t('Page')} {page}</Text>
             </View>
           </View>
         }
@@ -264,7 +296,8 @@ export default function HomeScreen() {
           </Text>
         }
         ListFooterComponent={
-          page > 1 || hasNextPage ? (
+          <View style={{ gap: 16, paddingBottom: 8 }}>
+          {page > 1 || hasNextPage ? (
             <View style={styles.pagination}>
               <Button color={colors.accent}
                 title={t("Previous")}
@@ -281,29 +314,38 @@ export default function HomeScreen() {
                 }}
               />
             </View>
-          ) : null
+          ) : null}
+          </View>
         }
         renderItem={({ item }) => (
-          <Card
-            {...getCardSummary(item)}
-            description={item.description}
-            onPress={() => {
-              router.push({
-                pathname: '/details',
-                params: { id: String(item.id) },
-              });
-            }}
-          />
+          <View style={[styles.gridItem, { maxWidth: columns > 1 ? '48.4%' : '100%' }]}>
+            <Card
+              compact={columns > 1}
+              {...getCardSummary(item)}
+              description={item.description}
+              onPress={() => openDetails(item)}
+            />
+          </View>
         )}
       />
-      <Pressable accessibilityRole="button" onPress={handleLogout} style={styles.logoutButton}>
-        <Text style={styles.logoutText}>{t("Sign out")}</Text>
-      </Pressable>
+
     </>
   );
 }
 
 const createStyles = (colors: RestaurantColors) => StyleSheet.create({
+  masthead: { marginHorizontal: -18 },
+  gridRow: { gap: 12, alignItems: 'flex-start' },
+  gridItem: { flex: 1, maxWidth: '100%' },
+  searchRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: 26, backgroundColor: colors.surface, marginTop: 20, paddingLeft: 12, overflow: 'hidden' },
+  searchIcon: { color: colors.muted, fontSize: 23 },
+  searchAction: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  filtersToggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44, marginTop: 8 },
+  filterLabel: { color: colors.muted, fontSize: 12 },
+  filtersPanel: { padding: 12, gap: 8, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 18, marginBottom: 10 },
+  sectionTitle: { fontSize: 25, fontFamily: restaurantBrand.serif, color: colors.text, flexShrink: 1 },
+  sectionNote: { color: colors.accent, fontSize: 12 },
   centered: {
     flex: 1,
     justifyContent: 'center',
@@ -334,19 +376,11 @@ const createStyles = (colors: RestaurantColors) => StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    padding: 16,
-    gap: 16,
+    padding: 18,
+    paddingTop: 0,
+    gap: 12,
   },
-  logoutButton: {
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  logoutText: { color: colors.accent, fontWeight: '600' },
-  eyebrow: { color: colors.accent, fontSize: 11, letterSpacing: 2, fontWeight: '700' },
+  eyebrow: { color: colors.accent, fontSize: 10, letterSpacing: 2.5, fontWeight: '700', marginTop: 23, marginBottom: 5 },
   quickLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
   quickLink: {
     minHeight: 44,
@@ -357,17 +391,20 @@ const createStyles = (colors: RestaurantColors) => StyleSheet.create({
   },
   quickLinkText: { color: colors.accent, fontWeight: '700' },
   header: {
-    marginBottom: 20,
+    marginBottom: 0,
   },
   heading: {
-    fontSize: 34,
-    fontWeight: '700',
+    fontSize: 39,
+    lineHeight: 46,
+    fontFamily: restaurantBrand.serif,
+    fontWeight: '500',
     color: colors.text,
   },
   subtitle: {
     fontSize: 16,
     color: colors.muted,
-    marginTop: 8,
+    marginTop: 6,
+    lineHeight: 22,
   },
   primaryAction: {
     alignSelf: 'flex-start',
@@ -386,7 +423,7 @@ const createStyles = (colors: RestaurantColors) => StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -395,13 +432,7 @@ const createStyles = (colors: RestaurantColors) => StyleSheet.create({
   areaFilterText: { color: colors.text, fontWeight: '600' },
   areaFilterTextSelected: { color: colors.onAccent, fontWeight: '700' },
   searchInput: {
-    marginTop: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
+    flex: 1, minHeight: 46, color: colors.text, fontSize: 14, paddingVertical: 10, paddingHorizontal: 6,
   },
   availabilityRow: {
     flexDirection: 'row',

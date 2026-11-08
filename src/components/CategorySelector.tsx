@@ -8,6 +8,9 @@ import type { Category } from '../types/CardItem';
 
 interface Props {
   emptyLabel?: string;
+  fieldLabel?: string;
+  collectionLabel?: string;
+  searchLabel?: string;
   categories: Category[];
   selectedId: number | null;
   onSelect: (id: number | null) => void;
@@ -17,7 +20,7 @@ function normalize(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
-export default function CategorySelector({ categories, selectedId, onSelect, emptyLabel }: Props) {
+export default function CategorySelector({ categories, selectedId, onSelect, emptyLabel, fieldLabel, collectionLabel, searchLabel }: Props) {
   const { colors, t, isDark, reduceMotion, screenReaderEnabled } = usePreferences();
   const styles = createStyles(colors);
 
@@ -52,12 +55,12 @@ export default function CategorySelector({ categories, selectedId, onSelect, emp
         ref={triggerRef}
         style={styles.selector}
         accessibilityRole="button"
-        accessibilityLabel={`${t('Category')}: ${selectedName}`}
-        accessibilityHint={t("Opens the category list")}
+        accessibilityLabel={`${fieldLabel ?? t('Category')}: ${selectedName}`}
+        accessibilityHint={collectionLabel ?? t("Opens the category list")}
         onPress={() => { setQuery(''); setVisible(true); }}
       >
         <View style={styles.selectorContent}>
-          <Text style={styles.label}>{t("CATEGORY")}</Text>
+          <Text style={styles.label}>{fieldLabel ?? t("CATEGORY")}</Text>
           <Text style={styles.selectedName}>{selectedName}</Text>
         </View>
         <Text style={styles.arrow}>⌄</Text>
@@ -67,7 +70,7 @@ export default function CategorySelector({ categories, selectedId, onSelect, emp
         <SafeAreaView accessibilityViewIsModal style={styles.modal}>
           <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.header}>
-              <Text ref={headingRef} accessible accessibilityRole="header" style={styles.title}>{t("Categories")}</Text>
+              <Text ref={headingRef} accessible accessibilityRole="header" style={styles.title}>{collectionLabel ?? t("Categories")}</Text>
               <Pressable accessibilityRole="button" onPress={() => setVisible(false)} style={styles.close}>
                 <Text style={styles.closeText}>{t("Close")}</Text>
               </Pressable>
@@ -75,9 +78,9 @@ export default function CategorySelector({ categories, selectedId, onSelect, emp
             <TextInput keyboardAppearance={isDark ? 'dark' : 'light'}
               value={query}
               onChangeText={setQuery}
-              placeholder={t("Search categories")}
+              placeholder={searchLabel ?? t("Search categories")}
               placeholderTextColor={colors.muted}
-              accessibilityLabel={t("Search categories")}
+              accessibilityLabel={searchLabel ?? t("Search categories")}
               autoCorrect={false}
               clearButtonMode="while-editing"
               style={styles.search}
