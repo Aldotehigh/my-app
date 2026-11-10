@@ -1,3 +1,4 @@
+
 import type { Language } from './preferenceStorage';
 
 const spanish: Record<string, string> = {
@@ -61,6 +62,18 @@ const spanish: Record<string, string> = {
   "The Monday offer has not been confirmed today": "La promoción de lunes aún no está confirmada para hoy",
   "Promotion discounts": "Descuentos por promoción",
   "Discounts already deducted from food and drink sales.": "Descuentos ya aplicados a las ventas de comida y bebidas.",
+
+  // NUEVAS TRADUCCIONES DE YOTSUBA
+  "Discover the art of Japanese cuisine.": "Descubre el arte de la cocina japonesa.",
+  "Monday 2-for-1": "Lunes 2×1",
+  "Subject to terms and conditions": "Sujeto a términos y condiciones",
+  "Terms and conditions": "Términos y condiciones",
+  "Valid only on authorized Mondays. Not valid on holidays or days without classes.": "Promoción válida únicamente los lunes autorizados. No aplica en días festivos ni en días sin clases.",
+  "Applies to full makimono orders only. Different rolls may be combined; the higher-priced roll in each pair will be charged.": "Aplica exclusivamente en órdenes completas de makimonos. Se pueden combinar diferentes rollos y se cobrará el de mayor precio de cada par.",
+  "Coco, Don Jorge, Roca/Rocca, Tesoro and Crunchy are excluded.": "Quedan excluidas las variedades Coco, Don Jorge, Roca/Rocca, Tesoro y Crunchy.",
+  "Dine-in only. Leftover food from this promotion cannot be taken away.": "Promoción exclusiva para consumo dentro del restaurante. Los alimentos sobrantes de esta promoción no podrán solicitarse para llevar.",
+  "Offer subject to the restaurant promotion calendar.": "Promoción sujeta al calendario de fechas autorizadas del restaurante.",
+
   "Home delivery": "A domicilio",
   "For pickup": "Para recoger",
   "At a table": "En mesa",
@@ -264,7 +277,7 @@ const spanish: Record<string, string> = {
   "View supplies": "Ver faltantes",
   "Could not load supplies.": "No se pudieron cargar los faltantes.",
   "Supply list sent": "Lista enviada al dueño",
-  "Could not send the supply list.": "No se pudo enviar la lista.",
+  "Could not send the supply list": "No se pudo enviar la lista.",
   "Could not update supplies.": "No se pudo actualizar el faltante.",
   "Use the date format YYYY-MM-DD.": "Escribe la fecha con el formato AAAA-MM-DD.",
   "This screen is for restaurant staff.": "Esta pantalla es para el personal del restaurante.",
@@ -607,7 +620,16 @@ const spanish: Record<string, string> = {
 };
 
 let activeLanguage: Language = 'es';
-export function setActiveLanguage(language: Language) { activeLanguage = language; }
-export function translate(key: string, language: Language = activeLanguage): string {
-  return language === 'es' ? (spanish[key] ?? key) : key;
+
+export function setActiveLanguage(language: Language) {
+  activeLanguage = language;
+}
+
+export function translate(
+  key: string,
+  language: Language = activeLanguage
+): string {
+  return language === 'es'
+    ? (spanish[key] ?? key)
+    : key;
 }

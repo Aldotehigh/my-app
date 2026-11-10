@@ -85,7 +85,7 @@ function AnimatedTabText({
 
 export default function HomeScreen() {
   const { colors, t, isDark } = usePreferences();
-  const styles = createStyles(colors);
+  const styles = createStyles(colors, isDark);
 
   const { width, fontScale } = useWindowDimensions();
   const columns = width >= 360 && fontScale <= 1.2 ? 2 : 1;
@@ -110,6 +110,7 @@ export default function HomeScreen() {
   const isAdmin = user?.can_manage_menu === true;
 
   const [cards, setCards] = useState<CardItem[]>([]);
+  const [featuredCards, setFeaturedCards] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -344,6 +345,97 @@ export default function HomeScreen() {
   );
 
   // ---------------------------------------------
+// CARGAR 4 PLATILLOS PARA EL CARRUSEL
+// ---------------------------------------------
+
+
+useFocusEffect(
+  useCallback(() => {
+    if (!isCustomer) {
+      setFeaturedCards([]);
+      return;
+    }
+
+    let active = true;
+
+    const loadFeaturedCards = async () => {
+      const candidates: CardItem[] = [];
+      const seenIds = new Set<string>();
+
+      try {
+        // Obtener platillos de diferentes páginas de Django
+        for (let currentPage = 1; currentPage <= 50; currentPage++) {
+          const data = await getCardsPage({
+            search: '',
+            categoryId: null,
+            availableOnly: true,
+            page: currentPage,
+            pageSize: 10,
+            area: null,
+          });
+
+          if (!active) return;
+
+          if (!data || !Array.isArray(data.results)) {
+            break;
+          }
+
+          for (const item of data.results) {
+            const summary = getCardSummary(item);
+            const id = String(item.id);
+
+            // Solo platillos disponibles, con foto y sin repetir
+            if (
+              summary.image &&
+              summary.isAvailable &&
+              !seenIds.has(id)
+            ) {
+              candidates.push(item);
+              seenIds.add(id);
+            }
+          }
+
+          if (!data.next) break;
+        }
+
+        // Mezclar aleatoriamente los platillos
+        for (let i = candidates.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+
+          [candidates[i], candidates[j]] = [
+            candidates[j],
+            candidates[i],
+          ];
+        }
+
+        // Elegir cuatro platillos al azar
+        const selected = candidates.slice(0, 4);
+
+        if (active) {
+          setFeaturedCards(selected);
+        }
+      } catch (err) {
+        console.log(
+          'Error al cargar platillos destacados:',
+          err
+        );
+
+        if (active) {
+          setFeaturedCards([]);
+        }
+      }
+    };
+
+    void loadFeaturedCards();
+
+    return () => {
+      active = false;
+    };
+  }, [isCustomer])
+);
+
+
+  // ---------------------------------------------
   // ACCIONES
   // ---------------------------------------------
 
@@ -375,18 +467,14 @@ export default function HomeScreen() {
     setReloadKey((current) => current + 1);
   };
 
-  const featured =
-    isCustomer &&
-    page === 1 &&
-    !search &&
-    categoryId === null &&
-    !area
-      ? cards.find(
-          (item) =>
-            Boolean(getCardSummary(item).image) &&
-            getCardSummary(item).isAvailable
-        )
-      : undefined;
+ const featured =
+  isCustomer &&
+  page === 1 &&
+  !search &&
+  categoryId === null &&
+  !area
+    ? featuredCards
+    : [];
 
   const openDetails = (item: CardItem) =>
     router.push({
@@ -497,7 +585,7 @@ export default function HomeScreen() {
                   ? 'Create dishes and keep the menu up to date.'
                   : staffArea
                     ? 'Open an item to change its availability.'
-                    : 'Descubre el arte de la cocina japonesa.'
+                    : 'Discover the art of Japanese cuisine.'
               )}
             </Text>
 
@@ -909,15 +997,12 @@ export default function HomeScreen() {
             {/* PLATILLO DESTACADO */}
             {/* --------------------------------- */}
 
-            {featured ? (
-              <FeaturedDish
-                key={featured.id}
-                card={featured}
-                onPress={() =>
-                  openDetails(featured)
-                }
-              />
-            ) : null}
+           {featured.length > 0 ? (
+  <FeaturedDish
+    cards={featured}
+    onPress={(item) => openDetails(item)}
+  />
+) : null}
 
             {/* RESERVACIONES */}
 
@@ -1048,7 +1133,10 @@ export default function HomeScreen() {
 // ESTILOS DE LA PANTALLA
 // =============================================
 
-const createStyles = (colors: RestaurantColors) =>
+const createStyles = (
+  colors: RestaurantColors,
+  isDark: boolean
+) =>
   StyleSheet.create({
     masthead: {
       marginHorizontal: -18,
@@ -1181,7 +1269,7 @@ const createStyles = (colors: RestaurantColors) =>
     },
 
     sectionNote: {
-      color: colors.accent,
+      color: isDark ? '#D8B067' : colors.accent,
       fontSize: 12,
     },
 
@@ -1234,12 +1322,12 @@ const createStyles = (colors: RestaurantColors) =>
     },
 
     eyebrow: {
-      color: colors.accent,
-      fontSize: 10,
-      letterSpacing: 2.5,
-      fontWeight: '700',
-      marginTop: -30,
-      marginBottom: 5,
+       color: isDark ? '#D8B067' : colors.accent,
+       fontSize: 10,
+       letterSpacing: 2.5,
+       fontWeight: '700',
+       marginTop: -30,
+       marginBottom: 5,
     },
 
     quickLinks: {
@@ -1314,13 +1402,25 @@ const createStyles = (colors: RestaurantColors) =>
     },
 
     slidingIndicator: {
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: colors.accent,
-    },
+  position: 'absolute',
+  left: 0,
+  top: 0,
+  height: 44,
+  borderRadius: 22,
+
+  backgroundColor: isDark ? '#801C18' : colors.accent,
+
+  borderTopWidth: isDark ? 1 : 0,
+  borderTopColor: '#A34437',
+
+  borderBottomWidth: isDark ? 1 : 0,
+  borderBottomColor: '#9B392A',
+
+  borderLeftWidth: isDark ? 0.5 : 0,
+  borderRightWidth: isDark ? 0.5 : 0,
+  borderLeftColor: '#84241D',
+  borderRightColor: '#84241D',
+},
 
     areaFilter: {
       flex: 1,

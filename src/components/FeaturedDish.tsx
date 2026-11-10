@@ -1,5 +1,6 @@
 
 import { useEffect, useRef, useState } from 'react';
+
 import {
   Animated,
   Easing,
@@ -15,29 +16,109 @@ import { usePreferences } from '../context/PreferencesContext';
 import { getCardSummary } from '../utils/cardPresentations';
 import { restaurantBrand } from '../constants/restaurantBrand';
 
+type FeaturedDishProps = {
+  cards: CardItem[];
+  onPress: (card: CardItem) => void;
+};
+
 export function FeaturedDish({
-  card,
+  cards,
   onPress,
-}: {
-  card: CardItem;
-  onPress: () => void;
-}) {
-  const { t } = usePreferences();
-  const summary = getCardSummary(card);
+}: FeaturedDishProps) {
+  const { t, reduceMotion, isDark } = usePreferences();
 
-  const [failed, setFailed] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
 
-  // Animaciones individuales de cada elemento
-  const eyebrowAnim = useRef(new Animated.Value(0)).current;
-  const titleAnim = useRef(new Animated.Value(0)).current;
-  const ruleAnim = useRef(new Animated.Value(0)).current;
-  const priceAnim = useRef(new Animated.Value(0)).current;
-  const buttonAnim = useRef(new Animated.Value(0)).current;
+  const [failedImages, setFailedImages] =
+    useState<(string | number)[]>([]);
+
+  // ============================================
+  // ANIMACIONES ORIGINALES DE LOS TEXTOS
+  // ============================================
+
+  const eyebrowAnim = useRef(
+    new Animated.Value(0)
+  ).current;
+
+  const titleAnim = useRef(
+    new Animated.Value(0)
+  ).current;
+
+  const ruleAnim = useRef(
+    new Animated.Value(0)
+  ).current;
+
+  const priceAnim = useRef(
+    new Animated.Value(0)
+  ).current;
+
+  const buttonAnim = useRef(
+    new Animated.Value(0)
+  ).current;
 
   // Oscurecimiento gradual de la fotografía
-  const shadeAnim = useRef(new Animated.Value(0.22)).current;
+  const shadeAnim = useRef(
+    new Animated.Value(0.22)
+  ).current;
+
+  // Transición entre fotografías
+  const imageOpacity = useRef(
+    new Animated.Value(0)
+  ).current;
+
+  const animationRef =
+    useRef<Animated.CompositeAnimation | null>(null);
+
+  // Detectar movimientos horizontales
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const lastSwipeAt = useRef(0);
+
+  // ============================================
+  // IDENTIFICADORES DE LAS TARJETAS
+  // ============================================
+
+  const cardsKey = cards
+    .map((item) => item.id)
+    .join(',');
+
+  const count = cards.length;
+
+  const currentIndex =
+    count > 0 ? activeIndex % count : 0;
+
+  const currentCard = cards[currentIndex];
+
+  const summary = currentCard
+    ? getCardSummary(currentCard)
+    : null;
+
+  // ============================================
+  // CAMBIAR DE PLATILLO MANUALMENTE
+  // ============================================
+
+  const changeCard = (nextIndex: number) => {
+    if (count <= 1) return;
+
+    const normalizedIndex =
+      (nextIndex + count) % count;
+
+    if (normalizedIndex === currentIndex) {
+      return;
+    }
+
+    animationRef.current?.stop();
+
+    setActiveIndex(normalizedIndex);
+  };
+
+  // ============================================
+  // ANIMACIÓN COMPLETA DE CADA PLATILLO
+  // ============================================
 
   useEffect(() => {
+    if (count === 0) return;
+
     const elements = [
       eyebrowAnim,
       titleAnim,
@@ -46,6 +127,38 @@ export function FeaturedDish({
       buttonAnim,
     ];
 
+    // Reiniciar los textos
+    elements.forEach((value) => {
+      value.setValue(0);
+    });
+
+    shadeAnim.setValue(0.22);
+    imageOpacity.setValue(0);
+
+    // Respetar reducción de movimiento
+    if (reduceMotion) {
+      elements.forEach((value) => {
+        value.setValue(1);
+      });
+
+      shadeAnim.setValue(1);
+      imageOpacity.setValue(1);
+
+      return;
+    }
+
+    // Aparición de la fotografía
+    const showImage = Animated.timing(
+      imageOpacity,
+      {
+        toValue: 1,
+        duration: 450,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }
+    );
+
+    // Entrada escalonada de los textos
     const enter = elements.map((value) =>
       Animated.timing(value, {
         toValue: 1,
@@ -55,6 +168,7 @@ export function FeaturedDish({
       })
     );
 
+    // Salida de los textos
     const exit = elements.map((value) =>
       Animated.timing(value, {
         toValue: 2,
@@ -64,71 +178,91 @@ export function FeaturedDish({
       })
     );
 
-    const reset = elements.map((value) =>
-      Animated.timing(value, {
-        toValue: 0,
-        duration: 0,
+    // ==========================================
+    // SECUENCIA ORIGINAL DEL CARRUSEL
+    // ==========================================
+
+    const animation = Animated.sequence([
+      // 1. Aparece la fotografía
+      showImage,
+
+      // 2. Fotografía sola
+      Animated.delay(1500),
+
+      // 3. Oscurecimiento gradual
+      Animated.timing(shadeAnim, {
+        toValue: 1,
+        duration: 500,
+        easing: Easing.inOut(Easing.cubic),
         useNativeDriver: true,
-      })
-    );
+      }),
 
-    const animation = Animated.loop(
-      Animated.sequence([
-        // La fotografía aparece sola al principio
-        Animated.delay(1500),
+      // 4. Entran los textos uno por uno
+      Animated.stagger(200, enter),
 
-        // El fondo se oscurece suavemente
+      // 5. Permanecen visibles
+      Animated.delay(3000),
+
+      // 6. Salen los textos
+      Animated.parallel([
+        ...exit,
+
         Animated.timing(shadeAnim, {
-          toValue: 1,
-          duration: 500,
+          toValue: 0.22,
+          duration: 600,
           useNativeDriver: true,
         }),
+      ]),
 
-        // Los textos aparecen uno después de otro
-        Animated.stagger(200, enter),
+      // 7. Se aprecia nuevamente la fotografía
+      Animated.delay(700),
 
-        // Se mantienen visibles
-        Animated.delay(3000),
+      // 8. Desaparece suavemente
+      Animated.timing(imageOpacity, {
+        toValue: 0,
+        duration: 450,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]);
 
-        // Los elementos se retiran hacia la izquierda
-        Animated.parallel([
-          ...exit,
-          Animated.timing(shadeAnim, {
-            toValue: 0.22,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-        ]),
+    animationRef.current = animation;
 
-        // Restablece las posiciones sin mostrar los textos
-        Animated.parallel(reset),
-
-        // Deja ver nuevamente la fotografía
-        Animated.delay(900),
-      ])
-    );
-
-    animation.start();
+    animation.start(({ finished }) => {
+      if (finished && count > 1) {
+        setActiveIndex(
+          (previous) => (previous + 1) % count
+        );
+      }
+    });
 
     return () => {
       animation.stop();
     };
   }, [
+    currentIndex,
+    cardsKey,
+    count,
+    reduceMotion,
     eyebrowAnim,
     titleAnim,
     ruleAnim,
     priceAnim,
     buttonAnim,
     shadeAnim,
+    imageOpacity,
   ]);
 
-  // Desplazamiento de izquierda a derecha al entrar
-  // y de derecha a izquierda al salir.
+  // ============================================
+  // ESTILO ANIMADO DE LOS TEXTOS
+  // ============================================
+
   const animatedStyle = (value: Animated.Value) => ({
     opacity: value.interpolate({
       inputRange: [0, 0.7, 1, 1.3, 2],
       outputRange: [0, 1, 1, 1, 0],
     }),
+
     transform: [
       {
         translateX: value.interpolate({
@@ -139,99 +273,268 @@ export function FeaturedDish({
     ],
   });
 
+  // ============================================
+  // DESLIZAR ENTRE PLATILLOS
+  // ============================================
+
+  const handleTouchStart = (
+    x: number,
+    y: number
+  ) => {
+    touchStartX.current = x;
+    touchStartY.current = y;
+  };
+
+  const handleTouchEnd = (
+    x: number,
+    y: number
+  ) => {
+    const distanceX = x - touchStartX.current;
+    const distanceY = y - touchStartY.current;
+
+    // Ignorar movimientos verticales
+    if (
+      Math.abs(distanceX) < 55 ||
+      Math.abs(distanceX) <= Math.abs(distanceY) * 1.4
+    ) {
+      return;
+    }
+
+    lastSwipeAt.current = Date.now();
+
+    if (distanceX < 0) {
+      changeCard(currentIndex + 1);
+    } else {
+      changeCard(currentIndex - 1);
+    }
+  };
+
+  if (!currentCard || !summary) {
+    return null;
+  }
+
+  const imageFailed = failedImages.includes(
+    currentCard.id
+  );
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={
-        t('Discover a dish') +
-        '. ' +
-        summary.title +
-        '. ' +
-        summary.price +
-        ' MXN'
-      }
-      onPress={onPress}
-      style={styles.panel}
-    >
-      {/* Fotografía original del platillo */}
-      {summary.image && !failed ? (
-        <Image
-          accessible={false}
-          source={{ uri: summary.image }}
-          style={styles.image}
-          onError={() => setFailed(true)}
-        />
-      ) : null}
+    <View style={styles.container}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={
+          t('Discover a dish') +
+          '. ' +
+          summary.title +
+          '. ' +
+          summary.price +
+          ' MXN'
+        }
+        onPress={() => {
+          // No abrir detalles después de deslizar
+          if (
+            Date.now() - lastSwipeAt.current < 500
+          ) {
+            return;
+          }
 
-      {/* Sombra gradual para mejorar la lectura */}
-      <Animated.View
-        pointerEvents="none"
+          onPress(currentCard);
+        }}
+        onTouchStart={(event) => {
+          handleTouchStart(
+            event.nativeEvent.pageX,
+            event.nativeEvent.pageY
+          );
+        }}
+        onTouchEnd={(event) => {
+          handleTouchEnd(
+            event.nativeEvent.pageX,
+            event.nativeEvent.pageY
+          );
+        }}
         style={[
-          styles.shade,
-          { opacity: shadeAnim },
+          styles.panel,
+
+          // ====================================
+          // BORDE DORADO SOLO EN MODO OSCURO
+          // ====================================
+          isDark && styles.darkPanel,
         ]}
-      />
-
-      <View style={styles.content}>
-        {/* 1. PARA DESCUBRIR */}
-        <Animated.View style={animatedStyle(eyebrowAnim)}>
-          <Text style={styles.eyebrow}>
-            {t('DISCOVER')}
-          </Text>
+      >
+        {/* FOTOGRAFÍA DEL PLATILLO */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.imageContainer,
+            {
+              opacity: imageOpacity,
+            },
+          ]}
+        >
+          {summary.image && !imageFailed ? (
+            <Image
+              accessible={false}
+              source={{
+                uri: summary.image,
+              }}
+              style={styles.image}
+              onError={() => {
+                setFailedImages((previous) =>
+                  previous.includes(currentCard.id)
+                    ? previous
+                    : [...previous, currentCard.id]
+                );
+              }}
+            />
+          ) : null}
         </Animated.View>
 
-        {/* 2. Nombre del platillo */}
-        <Animated.View style={animatedStyle(titleAnim)}>
-          <Text style={styles.title} numberOfLines={3}>
-            {summary.title}
-          </Text>
-        </Animated.View>
+        {/* SOMBRA GRADUAL */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.shade,
+            {
+              opacity: shadeAnim,
+            },
+          ]}
+        />
 
-        {/* 3. Línea decorativa */}
-        <Animated.View style={animatedStyle(ruleAnim)}>
-          <View style={styles.rule} />
-        </Animated.View>
+        {/* ==================================== */}
+        {/* CONTENIDO ANIMADO */}
+        {/* ==================================== */}
 
-        {/* 4. Precio */}
-        <Animated.View style={animatedStyle(priceAnim)}>
-          <Text style={styles.price}>
-            {summary.showStartingPrice
-              ? t('From') + ' '
-              : ''}
-            ${summary.price}{' '}
-            <Text style={styles.currency}>MXN</Text>
-          </Text>
-        </Animated.View>
-
-        {/* 5. Botón Ver detalle */}
-        <Animated.View style={animatedStyle(buttonAnim)}>
-          <View style={styles.link}>
-            <Text style={styles.linkText}>
-              {t('View details ›')}
+        <View
+          pointerEvents="none"
+          style={styles.content}
+        >
+          {/* 1. PARA DESCUBRIR */}
+          <Animated.View
+            style={animatedStyle(eyebrowAnim)}
+          >
+            <Text style={styles.eyebrow}>
+              {t('DISCOVER')}
             </Text>
-          </View>
-        </Animated.View>
-      </View>
-    </Pressable>
+          </Animated.View>
+
+          {/* 2. NOMBRE DEL PLATILLO */}
+          <Animated.View
+            style={animatedStyle(titleAnim)}
+          >
+            <Text
+              style={styles.title}
+              numberOfLines={3}
+            >
+              {summary.title}
+            </Text>
+          </Animated.View>
+
+          {/* 3. LÍNEA DECORATIVA */}
+          <Animated.View
+            style={animatedStyle(ruleAnim)}
+          >
+            <View style={styles.rule} />
+          </Animated.View>
+
+          {/* 4. PRECIO */}
+          <Animated.View
+            style={animatedStyle(priceAnim)}
+          >
+            <Text style={styles.price}>
+              {summary.showStartingPrice
+                ? t('From') + ' '
+                : ''}
+              ${summary.price}{' '}
+              <Text style={styles.currency}>
+                MXN
+              </Text>
+            </Text>
+          </Animated.View>
+
+          {/* 5. VER DETALLE */}
+          <Animated.View
+            style={animatedStyle(buttonAnim)}
+          >
+            <View style={[styles.link, isDark && styles.darkLink]}>
+              <Text style={styles.linkText}>
+                {t('View details ›')}
+              </Text>
+            </View>
+          </Animated.View>
+        </View>
+      </Pressable>
+
+      {/* ==================================== */}
+      {/* INDICADORES DEL CARRUSEL */}
+      {/* ==================================== */}
+
+      {count > 1 ? (
+        <View style={styles.pagination}>
+          {cards.map((item, index) => {
+            const selected = index === currentIndex;
+
+            return (
+              <Pressable
+                key={String(item.id)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  `Mostrar platillo ${index + 1}`
+                }
+                accessibilityState={{
+                  selected,
+                }}
+                onPress={() => changeCard(index)}
+                style={styles.dotTouch}
+              >
+                <View
+                  style={[
+                    styles.dot,
+                    {
+                      width: selected ? 22 : 6,
+
+                      backgroundColor: selected
+                        ? '#79251F'
+                        : '#CBB9A6',
+                    },
+                  ]}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
+// =============================================
+// ESTILOS
+// =============================================
+
 const styles = StyleSheet.create({
+  container: {
+    marginTop: 9,
+    marginBottom: 8,
+  },
+
+  // Diseño original de la tarjeta
   panel: {
     minHeight: 195,
     backgroundColor: '#211914',
     borderRadius: 18,
     overflow: 'hidden',
-    marginTop: 22,
-    marginBottom: 8,
+  },
+
+  // NUEVO: contorno dorado exclusivo del modo oscuro
+  darkPanel: {
+    borderWidth: 1,
+    borderColor: '#78502D',
+  },
+
+  imageContainer: {
+    ...StyleSheet.absoluteFill,
   },
 
   image: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
@@ -281,17 +584,48 @@ const styles = StyleSheet.create({
   },
 
   link: {
-    borderRadius: 22,
-    backgroundColor: '#79251F',
-    paddingHorizontal: 17,
-    minHeight: 38,
+  borderRadius: 22,
+  backgroundColor: '#79251F',
+  paddingHorizontal: 17,
+  minHeight: 38,
+  justifyContent: 'center',
+  marginTop: 2,
+},
+
+darkLink: {
+  backgroundColor: '#801C18',
+  borderTopWidth: 1,
+  borderTopColor: '#A34437',
+  borderBottomWidth: 1,
+  borderBottomColor: '#9B392A',
+  borderLeftWidth: 0.5,
+  borderRightWidth: 0.5,
+  borderLeftColor: '#84241D',
+  borderRightColor: '#84241D',
+},
+
+linkText: {
+  color: restaurantBrand.cream,
+  fontSize: 13,
+  fontFamily: restaurantBrand.serif,
+},
+  pagination: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 9,
+    gap: 5,
   },
 
-  linkText: {
-    color: restaurantBrand.cream,
-    fontSize: 13,
-    fontFamily: restaurantBrand.serif,
+  dotTouch: {
+    minWidth: 25,
+    minHeight: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  dot: {
+    height: 6,
+    borderRadius: 3,
   },
 });

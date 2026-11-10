@@ -1,20 +1,67 @@
+
 export const lightColors = {
-  background: '#F5EADB', surface: '#FFFAF1', text: '#2C211A',
-  muted: '#6D6155', accent: '#7D251F', border: '#E3D4BF',
-  soft: '#EEDDD0', olive: '#3F542B', onAccent: '#FFFFFF',
+  background: '#F5EADB',
+  surface: '#FFFAF1',
+  text: '#2C211A',
+  muted: '#6D6155',
+  accent: '#7D251F',
+  border: '#E3D4BF',
+  soft: '#EEDDD0',
+  olive: '#3F542B',
+  onAccent: '#FFFFFF',
   successBackground: '#E9EFDE',
 };
+
 export type RestaurantColors = typeof lightColors;
 
+// =============================================
+// MODO OSCURO — YOTSUBA
+// Inspirado en madera japonesa, vino y dorado
+// =============================================
+
 export const darkColors: RestaurantColors = {
-  background: '#171310', surface: '#241D18', text: '#F8F0E6',
-  muted: '#C6B8A7', accent: '#EAA99B', border: '#514438',
-  soft: '#422B25', olive: '#BDD695', onAccent: '#281510',
+  // Café oscuro cálido en lugar de negro
+  background: '#211510',
+
+  // Superficies ligeramente más claras
+  surface: '#30211B',
+
+  // Texto principal color crema
+  text: '#F3DEC5',
+
+  // Texto secundario cálido
+  muted: '#C9B49E',
+
+  // Rojo vino característico de Yotsuba
+  accent: '#963A32',
+
+  // Bordes dorados discretos
+  border: '#B78C52',
+
+  // Fondo de promociones y paneles
+  soft: '#38241D',
+
+  // Verde oliva para disponibilidad
+  olive: '#BDD695',
+
+  // Texto sobre botones color vino
+  onAccent: '#FFF1DF',
+
+  // Fondo de indicadores positivos
   successBackground: '#2C3B24',
 };
 
-// Kept for components that have not adopted the preferences context yet.
+// =============================================
+// COLORES ORIGINALES
+// =============================================
+
+// Kept for components that have not adopted
+// the preferences context yet.
 export const colors = lightColors;
+
+// =============================================
+// ALTO CONTRASTE — MODO CLARO
+// =============================================
 
 export const highContrastLightColors: RestaurantColors = {
   background: '#FFFFFF',
@@ -28,6 +75,10 @@ export const highContrastLightColors: RestaurantColors = {
   onAccent: '#FFFFFF',
   successBackground: '#E3F1D0',
 };
+
+// =============================================
+// ALTO CONTRASTE — MODO OSCURO
+// =============================================
 
 export const highContrastDarkColors: RestaurantColors = {
   background: '#000000',

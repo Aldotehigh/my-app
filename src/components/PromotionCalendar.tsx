@@ -1,26 +1,109 @@
 
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import {
   Alert,
   Animated,
   Button,
   Easing,
+  Image,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+
+import Svg, {
+  Circle,
+  Defs,
+  RadialGradient,
+  Stop,
+} from 'react-native-svg';
+
 import {
   getPromotion,
   savePromotion,
   type PromotionStatus,
 } from '../services/promotions';
+
 import { usePreferences } from '../context/PreferencesContext';
+import { restaurantBrand } from '../constants/restaurantBrand';
+
+// =============================================
+// COLORES DORADOS DE YOTSUBA
+// =============================================
+
+const GOLD = '#D8B067';
+const GOLD_BORDER = '#78502D';
+const CREAM = '#F3DEC5';
+
+// Imagen PNG de ondas japonesas transparentes
+const ondasJaponesas = require('../../assets/images/ondas_japonesas.png');
+
+// =============================================
+// CÍRCULO DORADO CON DEGRADADO
+// =============================================
+
+function GoldenPromotionIcon() {
+  return (
+    <View style={styles.goldIcon}>
+      <Svg
+        width={40}
+        height={40}
+        viewBox="0 0 40 40"
+        style={StyleSheet.absoluteFill}
+      >
+        <Defs>
+          <RadialGradient
+            id="goldGradient"
+            cx="30%"
+            cy="25%"
+            rx="75%"
+            ry="75%"
+          >
+            <Stop
+              offset="0%"
+              stopColor="#FFE5A8"
+            />
+            <Stop
+              offset="55%"
+              stopColor="#E8BB6D"
+            />
+            <Stop
+              offset="100%"
+              stopColor="#C68C38"
+            />
+          </RadialGradient>
+        </Defs>
+
+        <Circle
+          cx={20}
+          cy={20}
+          r={20}
+          fill="url(#goldGradient)"
+        />
+      </Svg>
+
+      <Text style={styles.goldIconText}>
+        %
+      </Text>
+    </View>
+  );
+}
+
+// =============================================
+// OBTENER EL SIGUIENTE LUNES
+// =============================================
 
 function nextMonday() {
   const date = new Date();
-  date.setDate(date.getDate() + (8 - date.getDay()) % 7);
+
+  date.setDate(
+    date.getDate() + (8 - date.getDay()) % 7
+  );
+
   return [
     date.getFullYear(),
     String(date.getMonth() + 1).padStart(2, '0'),
@@ -28,9 +111,16 @@ function nextMonday() {
   ].join('-');
 }
 
+// =============================================
+// CALENDARIO ADMINISTRATIVO ORIGINAL
+// =============================================
+
 export function PromotionCalendar() {
   const { colors, t } = usePreferences();
-  const [data, setData] = useState<PromotionStatus | null>(null);
+
+  const [data, setData] =
+    useState<PromotionStatus | null>(null);
+
   const [date, setDate] = useState(nextMonday);
   const [eligible, setEligible] = useState(false);
   const [reason, setReason] = useState('');
@@ -40,6 +130,7 @@ export function PromotionCalendar() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
+
       getPromotion()
         .then((value) => {
           if (active) {
@@ -65,12 +156,15 @@ export function PromotionCalendar() {
 
   async function save() {
     if (busy) return;
+
     setBusy(true);
 
     try {
       await savePromotion(date, eligible, reason);
+
       setData(await getPromotion());
       setError('');
+
       Alert.alert(t('Promotion calendar saved'));
     } catch (err) {
       Alert.alert(
@@ -112,10 +206,20 @@ export function PromotionCalendar() {
       </Text>
 
       {error ? (
-        <Text style={{ color: colors.accent }}>{error}</Text>
+        <Text
+          style={{
+            color: colors.accent,
+          }}
+        >
+          {error}
+        </Text>
       ) : null}
 
-      <Text style={{ color: colors.text }}>
+      <Text
+        style={{
+          color: colors.text,
+        }}
+      >
         {t('Monday date')} · YYYY-MM-DD
       </Text>
 
@@ -139,10 +243,14 @@ export function PromotionCalendar() {
         <Pressable
           key={String(value)}
           accessibilityRole="radio"
-          accessibilityState={{ checked: eligible === value }}
+          accessibilityState={{
+            checked: eligible === value,
+          }}
           disabled={busy}
           onPress={() => setEligible(value)}
-          style={{ paddingVertical: 12 }}
+          style={{
+            paddingVertical: 12,
+          }}
         >
           <Text style={{ color: colors.text }}>
             {eligible === value ? '✓ ' : ''}
@@ -194,15 +302,23 @@ export function PromotionCalendar() {
             setEligible(day.eligible);
             setReason(day.reason);
           }}
-          style={{ paddingVertical: 8 }}
+          style={{
+            paddingVertical: 8,
+          }}
         >
           <Text
             style={{
-              color: day.eligible ? colors.olive : colors.accent,
+              color: day.eligible
+                ? colors.olive
+                : colors.accent,
             }}
           >
             {day.date} ·{' '}
-            {t(day.eligible ? 'Offer enabled' : 'Offer suspended')}
+            {t(
+              day.eligible
+                ? 'Offer enabled'
+                : 'Offer suspended'
+            )}
           </Text>
 
           {day.reason ? (
@@ -216,8 +332,12 @@ export function PromotionCalendar() {
   );
 }
 
+// =============================================
+// PROMOCIÓN LUNES 2X1 DESPLEGABLE
+// =============================================
+
 export function PromotionNotice() {
-  const { colors, t } = usePreferences();
+  const { colors, t, isDark } = usePreferences();
 
   const [promotion, setPromotion] =
     useState<PromotionStatus | null>(null);
@@ -225,18 +345,25 @@ export function PromotionNotice() {
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
 
-  const animation = useRef(new Animated.Value(0)).current;
+  const animation = useRef(
+    new Animated.Value(0)
+  ).current;
 
+  // Consultar promoción desde Django
   useFocusEffect(
     useCallback(() => {
       let active = true;
 
       getPromotion()
         .then((value) => {
-          if (active) setPromotion(value);
+          if (active) {
+            setPromotion(value);
+          }
         })
         .catch(() => {
-          if (active) setPromotion(null);
+          if (active) {
+            setPromotion(null);
+          }
         });
 
       return () => {
@@ -244,6 +371,10 @@ export function PromotionNotice() {
       };
     }, [])
   );
+
+  // =========================================
+  // ANIMACIÓN DE APERTURA Y CIERRE
+  // =========================================
 
   useEffect(() => {
     const movement = Animated.timing(animation, {
@@ -262,12 +393,28 @@ export function PromotionNotice() {
     setExpanded((current) => !current);
   };
 
+  // =========================================
+  // TÉRMINOS Y CONDICIONES TRADUCIBLES
+  // =========================================
+
   const conditions = [
-    'Promoción válida únicamente los lunes autorizados. No aplica en días festivos ni en días sin clases.',
-    'Aplica exclusivamente en órdenes completas de makimonos. Se pueden combinar diferentes rollos y se cobrará el de mayor precio de cada par.',
-    'Quedan excluidas las variedades Coco, Don Jorge, Roca/Rocca, Tesoro y Crunchy.',
-    'Promoción exclusiva para consumo dentro del restaurante. Los alimentos sobrantes de esta promoción no podrán solicitarse para llevar.',
+    t(
+      'Valid only on authorized Mondays. Not valid on holidays or days without classes.'
+    ),
+    t(
+      'Applies to full makimono orders only. Different rolls may be combined; the higher-priced roll in each pair will be charged.'
+    ),
+    t(
+      'Coco, Don Jorge, Roca/Rocca, Tesoro and Crunchy are excluded.'
+    ),
+    t(
+      'Dine-in only. Leftover food from this promotion cannot be taken away.'
+    ),
   ];
+
+  // =========================================
+  // ESTADO ACTUAL DE LA PROMOCIÓN
+  // =========================================
 
   const status =
     promotion?.state === 'active'
@@ -275,83 +422,141 @@ export function PromotionNotice() {
       : promotion?.state === 'suspended'
         ? t('The Monday offer is suspended today')
         : promotion?.state === 'calendar_unconfirmed'
-          ? t('The Monday offer has not been confirmed today')
+          ? t(
+              'The Monday offer has not been confirmed today'
+            )
           : null;
+
+  // =========================================
+  // TARJETA DE LA PROMOCIÓN
+  // =========================================
 
   return (
     <View
-      style={{
-        marginTop: 16,
-        borderRadius: 14,
-        backgroundColor: colors.soft,
-        overflow: 'hidden',
-      }}
+      style={[
+        styles.promotionContainer,
+        {
+          backgroundColor: isDark
+            ? '#2E1B14'
+            : colors.soft,
+
+          borderColor: isDark
+            ? GOLD_BORDER
+            : 'transparent',
+
+          borderWidth: isDark ? 1 : 0,
+        },
+      ]}
     >
+      {/* ENCABEZADO COMPACTO */}
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         onPress={toggle}
-        style={{
-          minHeight: 64,
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 12,
-        }}
+        style={[
+          styles.promotionHeader,
+          {
+            minHeight: isDark ? 58 : 64,
+            paddingHorizontal: isDark ? 16 : 14,
+            paddingVertical: isDark ? 7 : 12,
+          },
+        ]}
       >
-        <View
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: 19,
-            backgroundColor: colors.accent,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
+        {/* ================================= */}
+        {/* ONDAS PNG SOLO EN MODO OSCURO */}
+        {/* ================================= */}
+
+        {isDark ? (
+          <View
+            pointerEvents="none"
+            style={styles.promotionWaves}
+          >
+            <Image
+              source={ondasJaponesas}
+              resizeMode="contain"
+              accessible={false}
+              style={styles.promotionWavesImage}
+            />
+          </View>
+        ) : null}
+
+        {/* CÍRCULO DE PROMOCIÓN */}
+        {isDark ? (
+          <GoldenPromotionIcon />
+        ) : (
+          <View
+            style={[
+              styles.lightIcon,
+              {
+                backgroundColor: colors.accent,
+              },
+            ]}
+          >
+            <Text
+              style={{
+                color: colors.onAccent,
+                fontSize: 18,
+              }}
+            >
+              %
+            </Text>
+          </View>
+        )}
+
+        {/* TÍTULO Y SUBTÍTULO */}
+        <View style={styles.headerText}>
           <Text
+            numberOfLines={1}
             style={{
-              color: colors.onAccent,
-              fontSize: 18,
+              color: isDark
+                ? CREAM
+                : colors.accent,
+
+              fontSize: isDark ? 17 : 16,
+
+              fontFamily: isDark
+                ? restaurantBrand.serif
+                : undefined,
+
+              fontWeight: isDark ? '500' : '700',
             }}
           >
-            %
+            {t('Monday 2-for-1')}
+          </Text>
+
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            style={{
+              color: isDark
+                ? '#D4BEA9'
+                : colors.muted,
+
+              fontSize: isDark ? 11 : 12,
+              marginTop: 2,
+            }}
+          >
+            {t('Subject to terms and conditions')}
           </Text>
         </View>
 
-        <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              color: colors.accent,
-              fontSize: 16,
-              fontWeight: '700',
-            }}
-          >
-            Lunes 2×1
-          </Text>
-
-          <Text
-            style={{
-              color: colors.muted,
-              fontSize: 12,
-              marginTop: 3,
-            }}
-          >
-            Sujeto a términos y condiciones
-          </Text>
-        </View>
-
+        {/* BOTÓN MÁS / MENOS */}
         <Text
           style={{
-            color: colors.accent,
-            fontSize: 22,
+            color: isDark ? GOLD : colors.accent,
+            fontSize: isDark ? 21 : 22,
             fontWeight: '500',
+            marginLeft: 5,
+            zIndex: 2,
           }}
         >
           {expanded ? '−' : '+'}
         </Text>
       </Pressable>
+
+      {/* ===================================== */}
+      {/* CONTENIDO DESPLEGABLE */}
+      {/* ===================================== */}
 
       <Animated.View
         style={{
@@ -366,51 +571,47 @@ export function PromotionNotice() {
         <View
           pointerEvents={expanded ? 'auto' : 'none'}
           onLayout={(event) => {
-            const height = event.nativeEvent.layout.height;
+            const height =
+              event.nativeEvent.layout.height;
 
             if (height !== contentHeight) {
               setContentHeight(height);
             }
           }}
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            paddingHorizontal: 16,
-            paddingBottom: 16,
-            gap: 11,
-          }}
+          style={styles.conditionsContent}
         >
+          {/* SEPARADOR */}
           <View
             style={{
               height: 1,
-              backgroundColor: colors.border,
+              backgroundColor: isDark
+                ? GOLD_BORDER
+                : colors.border,
               marginBottom: 3,
+              opacity: isDark ? 0.55 : 1,
             }}
           />
 
+          {/* TÍTULO DE LAS CONDICIONES */}
           <Text
             style={{
-              color: colors.text,
+              color: isDark ? CREAM : colors.text,
               fontWeight: '700',
               fontSize: 14,
             }}
           >
-            Términos y condiciones
+            {t('Terms and conditions')}
           </Text>
 
+          {/* CONDICIONES */}
           {conditions.map((condition, index) => (
             <View
               key={index}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'flex-start',
-                gap: 9,
-              }}
+              style={styles.conditionRow}
             >
               <Text
                 style={{
-                  color: colors.accent,
+                  color: isDark ? GOLD : colors.accent,
                   fontSize: 15,
                   fontWeight: '700',
                 }}
@@ -421,7 +622,9 @@ export function PromotionNotice() {
               <Text
                 style={{
                   flex: 1,
-                  color: colors.text,
+                  color: isDark
+                    ? '#E5D1BF'
+                    : colors.text,
                   fontSize: 12,
                   lineHeight: 19,
                 }}
@@ -431,10 +634,13 @@ export function PromotionNotice() {
             </View>
           ))}
 
+          {/* ESTADO ACTUAL */}
           {status ? (
             <Text
               style={{
-                color: colors.muted,
+                color: isDark
+                  ? '#BDA58F'
+                  : colors.muted,
                 fontSize: 12,
                 lineHeight: 18,
                 marginTop: 3,
@@ -448,3 +654,88 @@ export function PromotionNotice() {
     </View>
   );
 }
+
+// =============================================
+// ESTILOS
+// =============================================
+
+const styles = StyleSheet.create({
+  promotionContainer: {
+    marginTop: 5,
+    borderRadius: 14,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+
+  promotionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    position: 'relative',
+    zIndex: 1,
+    overflow: 'hidden',
+  },
+
+  headerText: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+    zIndex: 2,
+  },
+
+  // PNG decorativo detrás del texto
+  promotionWaves: {
+    position: 'absolute',
+    width: 185,
+    height: 62,
+    right: 20,
+    bottom: -8,
+    opacity: 0.35,
+    zIndex: 0,
+  },
+
+  promotionWavesImage: {
+    width: '100%',
+    height: '100%',
+  },
+
+  goldIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    zIndex: 2,
+  },
+
+  goldIconText: {
+    color: '#301A14',
+    fontSize: 22,
+    fontFamily: restaurantBrand.serif,
+    zIndex: 1,
+  },
+
+  lightIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  conditionsContent: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 11,
+  },
+
+  conditionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 9,
+  },
+});

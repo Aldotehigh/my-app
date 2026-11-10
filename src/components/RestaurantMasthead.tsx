@@ -2,7 +2,6 @@
 import {
   Image,
   ImageBackground,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -16,18 +15,19 @@ import {
   Montserrat_500Medium,
 } from '@expo-google-fonts/montserrat';
 
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePreferences } from '../context/PreferencesContext';
 import { restaurantBrand } from '../constants/restaurantBrand';
-import { useAuth } from '../context/AuthContext';
 import { OrderInboxButton } from '../context/OrdersContext';
 
 const madera = require('../../assets/images/madera.jpg');
 const imageSize = Image.resolveAssetSource(madera);
 
-// Trébol de cuatro pétalos
+// =============================================
+// TRÉBOL DE CUATRO PÉTALOS
+// =============================================
+
 function YotsubaFlower() {
   return (
     <Svg width={47} height={47} viewBox="0 0 100 100">
@@ -50,10 +50,13 @@ function YotsubaFlower() {
   );
 }
 
+// =============================================
+// ENCABEZADO DE YOTSUBA
+// =============================================
+
 export function RestaurantMasthead() {
-  const { t, colors } = usePreferences();
-  const { user } = useAuth();
-  const router = useRouter();
+  const { t, colors, isDark } = usePreferences();
+
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -83,7 +86,7 @@ export function RestaurantMasthead() {
           },
         ]}
       >
-        {/* Botones de pedidos y configuración */}
+        {/* BOTÓN DE PEDIDOS */}
         <View
           style={[
             styles.tools,
@@ -91,25 +94,9 @@ export function RestaurantMasthead() {
           ]}
         >
           <OrderInboxButton />
-
-          {user?.role === 'customer' ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('Settings')}
-              style={styles.settings}
-              onPress={() => router.navigate('/settings')}
-            >
-              <Text
-                accessible={false}
-                style={styles.settingsText}
-              >
-                ☷
-              </Text>
-            </Pressable>
-          ) : null}
         </View>
 
-        {/* Trébol, nombre y subtítulo - 20 píxeles arriba */}
+        {/* LOGOTIPO Y NOMBRE */}
         <View
           style={[
             styles.brandContainer,
@@ -129,7 +116,9 @@ export function RestaurantMasthead() {
                 fontFamily: fontsLoaded
                   ? 'Montserrat_500Medium'
                   : undefined,
-                fontWeight: fontsLoaded ? undefined : '500',
+                fontWeight: fontsLoaded
+                  ? undefined
+                  : '500',
               },
             ]}
             numberOfLines={1}
@@ -149,7 +138,10 @@ export function RestaurantMasthead() {
         </View>
       </ImageBackground>
 
-      {/* Onda inferior descendente */}
+      {/* ===================================== */}
+      {/* ONDA INFERIOR */}
+      {/* ===================================== */}
+
       <View
         pointerEvents="none"
         style={styles.waveContainer}
@@ -160,6 +152,7 @@ export function RestaurantMasthead() {
           viewBox="0 0 400 65"
           preserveAspectRatio="none"
         >
+          {/* FONDO DE LA ONDA */}
           <Path
             d="
               M 0 12
@@ -172,11 +165,32 @@ export function RestaurantMasthead() {
             "
             fill={colors.background}
           />
+
+          {/* CONTORNO DORADO: SOLO MODO OSCURO */}
+          {isDark ? (
+            <Path
+              d="
+                M 0 12
+                C 76 10, 120 14, 176 19
+                C 242 26, 292 39, 338 44
+                C 361 47, 385 49, 400 46
+              "
+              fill="none"
+              stroke="#D8B067"
+              strokeWidth={1.2}
+              strokeOpacity={0.85}
+              strokeLinecap="round"
+            />
+          ) : null}
         </Svg>
       </View>
     </View>
   );
 }
+
+// =============================================
+// ESTILOS
+// =============================================
 
 const styles = StyleSheet.create({
   hero: {
@@ -201,22 +215,6 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: 44,
     zIndex: 10,
-  },
-
-  settings: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(45, 27, 22, 0.8)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(231, 200, 169, 0.25)',
-  },
-
-  settingsText: {
-    color: '#F2DDC6',
-    fontSize: 24,
   },
 
   brandContainer: {
