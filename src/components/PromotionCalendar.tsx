@@ -28,8 +28,8 @@ import {
   type PromotionStatus,
 } from '../services/promotions';
 
-import { usePreferences } from '../context/PreferencesContext';
 import { restaurantBrand } from '../constants/restaurantBrand';
+import { usePreferences } from '../context/PreferencesContext';
 
 // =============================================
 // COLORES DORADOS DE YOTSUBA
@@ -405,7 +405,7 @@ export function PromotionNotice() {
       'Applies to full makimono orders only. Different rolls may be combined; the higher-priced roll in each pair will be charged.'
     ),
     t(
-      'Coco, Don Jorge, Roca/Rocca, Tesoro and Crunchy are excluded.'
+      'Coco, Don Jorge, Roca, Tesoro and Crunchy are excluded.'
     ),
     t(
       'Dine-in only. Leftover food from this promotion cannot be taken away.'

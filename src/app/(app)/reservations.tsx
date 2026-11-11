@@ -1,3 +1,5 @@
+import { languageLocales } from '../../utils/preferenceStorage';
+import { ReservationDateFields } from '../../components/ReservationDateFields';
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Alert, Button, ScrollView, Text, TextInput, View } from 'react-native';
@@ -63,7 +65,7 @@ export default function ReservationsScreen() {
   function confirm(item: Reservation, status: ReservationStatus) {
     Alert.alert(t(reservationLabels[status]), `${t('Table')} ${item.table.label} · ${item.contact_name}`, [{ text: t('Cancel'), style: 'cancel' }, { text: t('Confirm'), onPress: () => void update(item, status) }]);
   }
-  function localTime(value: string) { return new Date(value).toLocaleString(preferences.language === 'es' ? 'es-MX' : 'en-US', { timeZone: 'America/Mexico_City' }); }
+  function localTime(value: string) { return new Date(value).toLocaleString(languageLocales[preferences.language], { timeZone: 'America/Mexico_City' }); }
   if (!allowed) return <Text style={{ padding: 24, color: colors.text }}>{t('You do not have permission to perform this action.')}</Text>;
   return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40 }}>
     <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>{t('Reservations')}</Text>
@@ -72,7 +74,7 @@ export default function ReservationsScreen() {
       {input('Party size', party, setParty, true)}
       <DiningTablePicker value={table?.label || ''} onChange={(_, selected) => setTable(selected)} partySize={Number(party) || 1} disabled={busy} />
       {input('Contact name', name, setName)}{input('Contact phone', phone, setPhone, true)}
-      {input('Date (YYYY-MM-DD)', date, setDate)}{input('Time (HH:MM, 24-hour)', time, setTime)}
+      <ReservationDateFields date={date} time={time} setDate={setDate} setTime={setTime} disabled={busy} />
       {input('Reservation notes', notes, setNotes)}
       <Text style={{ color: colors.muted }}>{t('A request does not hold the table until the restaurant confirms it.')}</Text>
       <Button title={t('Request reservation')} color={colors.accent} disabled={busy || !table} onPress={() => void submit()} />

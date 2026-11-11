@@ -324,7 +324,7 @@ export function FeaturedDish({
         accessibilityLabel={
           t('Discover a dish') +
           '. ' +
-          summary.title +
+          t(summary.title) +
           '. ' +
           summary.price +
           ' MXN'
@@ -424,7 +424,7 @@ export function FeaturedDish({
               style={styles.title}
               numberOfLines={3}
             >
-              {summary.title}
+              {t(summary.title)}
             </Text>
           </Animated.View>
 

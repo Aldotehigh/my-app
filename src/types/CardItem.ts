@@ -15,6 +15,7 @@ export interface CardPresentation {
     | 'gyo_beef' | 'ebi' | 'mixed';
   price: string;
   image: string | null;
+  description_en?: string;
   description: string | null;
   is_available: boolean;
 }
@@ -55,6 +56,7 @@ export interface CardItem {
   id: string;
   title: string;
   image: string;
+  description_en?: string;
   description: string;
   backgroundColor: string;
   price: string;

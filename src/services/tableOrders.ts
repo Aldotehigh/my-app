@@ -21,6 +21,7 @@ export interface OrderLine {
 export interface TableOrder {
   fulfillment?: 'dine_in' | 'pickup' | 'delivery';
   delivery_status?: 'pending' | 'accepted' | 'rejected';
+  dispatched_at?: string | null;
   delivery_address?: Partial<Address>;
   pricing?: Pricing | null;
   id: number;
@@ -82,4 +83,12 @@ export function serializeCartLines(lines: CartLine[]) {
 
         allergy: line.allergy,
   }));
+}
+
+export function updateDeliveryProgress(id: number, status: 'dispatched' | 'delivered') {
+  return fetchWithAuth<TableOrder>(`/table-orders/${id}/delivery-progress/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
 }

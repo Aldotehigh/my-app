@@ -1,3 +1,4 @@
+import { japaneseDescription } from '../utils/japaneseMenu';
 import { restaurantBrand } from '../constants/restaurantBrand';
 import { usePreferences } from '../context/PreferencesContext';
 import type { RestaurantColors } from '../constants/restaurantColors';
@@ -9,6 +10,7 @@ interface CardProps {
   title: string;
   image: string | null;
   description: string | null;
+  englishDescription?: string;
   backgroundColor?: string;
   price: string;
   showStartingPrice?: boolean;
@@ -20,14 +22,17 @@ export default function Card({
   compact = false,
   title,
   image,
-  description,
+  description: originalDescription,
+  englishDescription,
   backgroundColor,
   price,
   showStartingPrice = false,
   isAvailable,
   onPress,
 }: CardProps) {
-  const { colors, t } = usePreferences();
+  const { colors, t, preferences } = usePreferences();
+  const japanese = preferences.language === 'ja' ? japaneseDescription(originalDescription) : undefined;
+  const description = japanese ?? (preferences.language !== 'es' ? englishDescription?.trim() || originalDescription : originalDescription);
   const styles = createStyles(colors);
   const { fontScale } = useWindowDimensions();
 
@@ -39,7 +44,7 @@ export default function Card({
       onPress={onPress}
       accessible
       accessibilityLabel={[
-        title,
+        t(title),
         description,
         `${t(showStartingPrice ? 'From' : 'Price')}: ${price} ${t('Mexican pesos')}`,
         t(isAvailable ? 'Available' : 'Sold out'),
@@ -82,7 +87,7 @@ export default function Card({
           </Text>
         </View>
 
-        <Text style={[styles.title, compact && styles.compactTitle]}>{title}</Text>
+        <Text style={[styles.title, compact && styles.compactTitle]}>{t(title)}</Text>
 
         {description?.trim() ? (
           <Text style={[styles.description, compact && styles.compactDescription]} numberOfLines={fontScale > 1.2 ? undefined : 2}>

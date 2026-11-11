@@ -35,6 +35,7 @@ export default function FormScreen() {
   const canEditMenu = Boolean(user?.can_edit_menu ?? user?.can_manage_menu);
 
   const [title, setTitle] = useState(editing?.title ?? '');
+  const [englishDescription, setEnglishDescription] = useState(editing?.description_en ?? '');
   const [description, setDescription] = useState(editing?.description ?? '');
   const [price, setPrice] = useState(editing?.price ?? '');
   const [imageUri, setImageUri] = useState<string | null>(editing?.image ?? null);
@@ -110,6 +111,7 @@ export default function FormScreen() {
       const formData = new FormData();
       formData.append('title', title);
       formData.append('description', description);
+      formData.append('description_en', englishDescription.trim());
       formData.append('price', normalizedPrice);
       formData.append('category_id', String(categoryId));
       formData.append('is_available', String(isAvailable));
@@ -182,6 +184,10 @@ export default function FormScreen() {
         numberOfLines={4}
         editable={!saving}
       />
+      <Text style={styles.label}>{t("English description")}</Text>
+      <TextInput value={englishDescription} onChangeText={setEnglishDescription}
+        accessibilityLabel={t("English description")} keyboardAppearance={isDark ? 'dark' : 'light'}
+        style={[styles.input, styles.textArea]} multiline editable={!saving} />
       <Text style={styles.label}>{t("Price (MXN)")}</Text>
       <TextInput placeholderTextColor={colors.muted} keyboardAppearance={isDark ? 'dark' : 'light'}
         value={price}

@@ -1,3 +1,4 @@
+import { categoryName } from '../utils/categoryNames';
 import { announce } from '../utils/announce';
 import { usePreferences } from '../context/PreferencesContext';
 import type { RestaurantColors } from '../constants/restaurantColors';
@@ -21,7 +22,7 @@ function normalize(value: string) {
 }
 
 export default function CategorySelector({ categories, selectedId, onSelect, emptyLabel, fieldLabel, collectionLabel, searchLabel }: Props) {
-  const { colors, t, isDark, reduceMotion, screenReaderEnabled } = usePreferences();
+  const { colors, t, isDark, reduceMotion, screenReaderEnabled, preferences } = usePreferences();
   const styles = createStyles(colors);
 
   const headingRef = useRef<Text>(null);
@@ -38,12 +39,13 @@ export default function CategorySelector({ categories, selectedId, onSelect, emp
 
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
-  const selectedName = categories.find((category) => category.id === selectedId)?.name ?? (emptyLabel ?? t("All categories"));
-  const results = categories.filter((category) => normalize(category.name).includes(normalize(query)));
+  const localizedCategories = categories.map((category) => ({ ...category, name: categoryName(category.name, preferences.language), originalName: category.name }));
+  const selectedName = localizedCategories.find((category) => category.id === selectedId)?.name ?? (emptyLabel ?? t("All categories"));
+  const results = localizedCategories.filter((category) => [category.name, category.originalName].some((name) => normalize(name).includes(normalize(query))));
 
   const handleSelect = (id: number | null) => {
     onSelect(id);
-    const name = categories.find((category) => category.id === id)?.name ?? (emptyLabel ?? t('All categories'));
+    const name = localizedCategories.find((category) => category.id === id)?.name ?? (emptyLabel ?? t('All categories'));
     announce(`${t('Category selected')}: ${name}`);
     setVisible(false);
     setQuery('');

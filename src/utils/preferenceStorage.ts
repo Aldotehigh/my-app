@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-export type Language = 'es' | 'en';
+export type Language = 'es' | 'en' | 'ja';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type PageSize = 10 | 20 | 30;
 export interface AppPreferences {
@@ -33,7 +33,7 @@ export async function readPreferences(): Promise<AppPreferences> {
   const data = value as Partial<AppPreferences>;
   return {
     highContrast: data.highContrast === true,
-    language: data.language === 'en' ? 'en' : 'es',
+    language: data.language === 'en' || data.language === 'ja' ? data.language : 'es',
     themeMode: data.themeMode === 'light' || data.themeMode === 'dark' ? data.themeMode : 'system',
     pageSize: data.pageSize === 20 || data.pageSize === 30 ? data.pageSize : 10,
   };
@@ -42,3 +42,5 @@ export async function readPreferences(): Promise<AppPreferences> {
 export async function writePreferences(value: AppPreferences): Promise<void> {
   await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(value));
 }
+
+export const languageLocales: Record<Language, string> = { es: 'es-MX', en: 'en-US', ja: 'ja-JP' };

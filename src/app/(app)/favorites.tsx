@@ -135,6 +135,7 @@ export default function FavoritesScreen() {
         <Card
           {...getCardSummary(item)}
           description={item.description}
+              englishDescription={item.description_en}
           onPress={() =>
             router.push({
               pathname: '/details',

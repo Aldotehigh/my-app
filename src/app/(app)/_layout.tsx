@@ -51,15 +51,15 @@ function AuthenticatedNavigator() {
     <OrdersProvider>
     <View style={{ flex: 1 }}>
     <Stack
-      screenOptions={{
+      screenOptions={({ route }) => ({
         contentStyle: { backgroundColor: colors.background },
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.accent,
         headerTitleStyle: { color: colors.text, fontWeight: '700' },
         headerShadowVisible: false,
-        headerRight: () => <OrderInboxButton />,
+        ...(user.role === 'customer' || route.name === 'settings' ? {} : { headerRight: () => <OrderInboxButton /> }),
         animation: reduceMotion ? 'none' : 'default',
-      }}
+      })}
     >
       <Stack.Screen name="index" options={{ headerShown: false, title: t(user.can_manage_menu ? "Manage menu" : user.area === "kitchen" ? "Kitchen" : user.area === "bar" ? "Drinks bar" : user.area === "sushi" ? "Sushi" : "Restaurant menu") }} />
       <Stack.Screen name="form" options={{ title: t(user.area === 'bar' ? 'Manage drink' : 'Manage dish') }} />

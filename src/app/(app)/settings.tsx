@@ -83,13 +83,12 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text accessibilityRole="header" style={styles.title}>{t('Language')}</Text>
-        {([{ value: 'es', label: 'Español' }, { value: 'en', label: 'English' }] as const).map((option) => (
+        {([{ value: 'es', label: 'Español' }, { value: 'en', label: 'English' }, { value: 'ja', label: '日本語' }] as const).map((option) => (
           <Pressable key={option.value} disabled={saving} accessibilityLabel={t(option.label)} accessibilityRole="radio" accessibilityState={{ checked: language === option.value, disabled: saving }} onPress={() => setLanguage(option.value)} style={[styles.option, language === option.value && styles.selected]}>
             <Text style={styles.optionText}>{option.label}</Text>
             {language === option.value ? <Text style={styles.check}>✓</Text> : null}
           </Pressable>
         ))}
-        <Text style={styles.description}>{t('Menu names and descriptions appear as entered by the restaurant.')}</Text>
       </View>
 
       <View style={styles.section}>

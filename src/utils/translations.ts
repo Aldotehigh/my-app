@@ -1,7 +1,38 @@
+import { japaneseMenuName } from './japaneseMenu';
+import { japanese } from './japanese';
 
 import type { Language } from './preferenceStorage';
 
 const spanish: Record<string, string> = {
+  "Choose a protein": "Elige una proteína",
+  "Choose your noodles": "Elige el tipo de fideo",
+  "Mark picked up": "Marcar como recogido",
+  "Reservation date": "Fecha de reservación",
+  "Reservation time": "Hora de reservación",
+  "Choose a time": "Elige una hora",
+  "English description": "Descripción en inglés",
+  "Order": "Pedido",
+  "Order declined": "Pedido rechazado",
+  "Delivered": "Entregado",
+  "Picked up": "Recogido",
+  "Served at your table": "Servido en tu mesa",
+  "On the way": "En camino",
+  "Ready to dispatch": "Listo para enviar",
+  "Ready \u00b7 address confirmation pending": "Listo · falta confirmar el domicilio",
+  "Ready for pickup": "Tus alimentos están listos para recoger",
+  "Ready to serve": "Listo para servir",
+  "Preparing your order": "Estamos preparando tu pedido",
+  "Restaurant reviewing your order": "El restaurante está revisando tu pedido",
+  "Order received": "Pedido recibido",
+  "Item unavailable": "Producto no disponible",
+  "Your allergy note": "Tu nota de alergia",
+  "Send out for delivery": "Marcar en camino",
+  "Confirm delivery completed": "Confirmar entrega",
+  "The owner must complete delivery from the order.": "El dueño debe confirmar la entrega desde el pedido.",
+  "Wait until every available item is ready.": "Espera a que todos los productos disponibles estén listos.",
+  "Mark the order as dispatched first.": "Marca el pedido en camino primero.",
+  "Choose a valid delivery status.": "Elige un estado de entrega válido.",
+
   "Tables": "Mesas",
   "Search tables": "Buscar mesas",
   "Your reservation status has changed.": "Cambió el estado de tu reservación.",
@@ -629,6 +660,7 @@ export function translate(
   key: string,
   language: Language = activeLanguage
 ): string {
+  if (language === 'ja') return japanese[key] ?? japaneseMenuName(key);
   return language === 'es'
     ? (spanish[key] ?? key)
     : key;

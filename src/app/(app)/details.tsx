@@ -1,3 +1,4 @@
+import { japaneseDescription } from '../../utils/japaneseMenu';
 import { OrderCustomizer } from '../../components/OrderCustomizer';
 import { ingredientLabels, presentationLabels } from '../../utils/cardPresentations';
 import { useAuth } from '../../context/AuthContext';
@@ -26,7 +27,7 @@ import {
 import type { CardItem } from '../../types/CardItem';
 
 export default function DetailScreen() {
-  const { colors, t } = usePreferences();
+  const { colors, t, preferences } = usePreferences();
   const styles = createStyles(colors);
 
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -218,7 +219,7 @@ export default function DetailScreen() {
       ) : null}
 
       <View style={styles.content}>
-        <Text accessibilityRole="header" style={styles.title}>{card.display_title ?? card.title}</Text>
+        <Text accessibilityRole="header" style={styles.title}>{t(card.display_title ?? card.title)}</Text>
         {flavors.length ? (
           <View style={styles.presentationList}>
             <Text accessibilityRole="header" style={styles.presentationLabel}>{t('Choose an ingredient')}</Text>
@@ -235,7 +236,7 @@ export default function DetailScreen() {
                   onPress={() => setSelection({ cardId: id, optionId: preferred.id })}
                   style={[styles.presentationOption, selected?.flavor === flavor && styles.presentationSelected]}
                 >
-                  <Text style={styles.presentationLabel}>{selected?.flavor === flavor ? '✓ ' : ''}{flavor}</Text>
+                  <Text style={styles.presentationLabel}>{selected?.flavor === flavor ? '✓ ' : ''}{t(flavor)}</Text>
                 </Pressable>
               );
             })}
@@ -267,7 +268,7 @@ export default function DetailScreen() {
           </View>
         ) : null}
         <Text style={styles.price}>${selected?.price ?? card.price} MXN</Text>
-        <Text style={styles.description}>{selected?.description || card.description}</Text>
+        <Text style={styles.description}>{(preferences.language === 'ja' && japaneseDescription(selected?.description || card.description)) || (preferences.language !== 'es' && (selected?.description_en?.trim() || (!selected?.description ? card.description_en?.trim() : undefined))) || selected?.description || card.description}</Text>
 
         {user?.role === 'customer' && isAvailable && card.category ? (
           <OrderCustomizer

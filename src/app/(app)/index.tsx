@@ -1118,6 +1118,7 @@ useFocusEffect(
               compact={columns > 1}
               {...getCardSummary(item)}
               description={item.description}
+              englishDescription={item.description_en}
               onPress={() =>
                 openDetails(item)
               }

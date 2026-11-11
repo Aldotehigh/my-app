@@ -1,3 +1,4 @@
+import { CustomerOrderCard, deliveryReady } from '../../components/CustomerOrderCard';
 import { DiningTablePicker } from '../../components/DiningTablePicker';
 import { addressText, completeAddress } from '../../types/Address';
 import { quoteOrder, reviewDelivery, type Pricing } from '../../services/promotions';
@@ -9,7 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import {
-  orderStatusLabels, sendTableOrder, updateOrderLine,
+  orderStatusLabels, sendTableOrder, updateOrderLine, updateDeliveryProgress,
   type LineStatus,
 } from '../../services/tableOrders';
 
@@ -135,7 +136,7 @@ export default function TableOrdersScreen() {
     return (
       <>
         {selections.length ? <Text style={{ color: colors.text }}>{selections.map(t).join(', ')}</Text> : null}
-        {removals.length ? <Text style={{ color: colors.text }}>{t('Without')} {removals.join(', ')}</Text> : null}
+        {removals.length ? <Text style={{ color: colors.text }}>{t('Without')} {removals.map(t).join(', ')}</Text> : null}
         {allergy ? (
           <View style={[styles.allergy, { backgroundColor: colors.soft, borderColor: colors.accent }]}>
             <Text style={{ color: colors.text, fontWeight: '700' }}>{t('ALLERGY ALERT')} · {allergy}</Text>
@@ -153,7 +154,7 @@ export default function TableOrdersScreen() {
           {!lines.length ? <Text style={{ color: colors.muted }}>{t('Your cart is empty.')}</Text> : null}
           {lines.map((line) => (
             <View key={line.id} style={[styles.line, { borderColor: colors.muted }]}>
-              <Text style={{ color: colors.text, fontWeight: '700' }}>{line.quantity} × {line.title}</Text>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>{line.quantity} × {t(line.title)}</Text>
               <Text style={{ color: colors.text }}>${(Number(line.price) * line.quantity).toFixed(2)} MXN</Text>
               {lineNotes(line.removals, line.allergy, line.selections.map((selection) => selection.label))}
               <Button color={colors.accent} title={t('Remove from cart')} disabled={busy} onPress={() => remove([line.id])} />
@@ -225,7 +226,7 @@ export default function TableOrdersScreen() {
       {loading || busy ? <ActivityIndicator color={colors.accent} /> : null}
       {error ? <Text accessibilityRole="alert" style={{ color: colors.accent }}>{error}</Text> : null}
       {!loading && !error && !orders.length ? <Text style={{ color: colors.muted }}>{t('There are no orders yet.')}</Text> : null}
-      {orders.map((order) => (
+      {(customer ? [...orders].sort((first, second) => second.id - first.id) : orders).map((order) => customer ? <CustomerOrderCard key={order.id} order={order} /> : (
         <View key={order.id} style={panel}>
           <Text style={[styles.heading, { color: colors.text }]}>#{order.id} · {t(order.fulfillment === 'delivery' ? 'Home delivery' : order.fulfillment === 'pickup' ? 'For pickup' : 'Table')} {order.table ?? ''}</Text>
           {order.fulfillment === 'delivery' ? (
@@ -238,6 +239,19 @@ export default function TableOrdersScreen() {
               </> : null}
             </View>
           ) : null}
+          {user?.can_view_business && order.fulfillment === 'delivery' && order.delivery_status === 'accepted' && deliveryReady(order) ? (
+            <Button color={colors.accent} disabled={busy}
+              title={t(order.dispatched_at ? 'Confirm delivery completed' : 'Send out for delivery')}
+              onPress={() => {
+                if (operation.current) return;
+                operation.current = true;
+                setBusy(true);
+                void updateDeliveryProgress(order.id, order.dispatched_at ? 'delivered' : 'dispatched')
+                  .then(() => refresh())
+                  .catch((err) => Alert.alert(t('Error'), err instanceof Error ? err.message : ''))
+                  .finally(() => { operation.current = false; setBusy(false); });
+              }} />
+          ) : null}
           {order.pricing ? <View style={{ gap: 5 }}>
             <Text style={{ color: colors.text }}>{t('Subtotal')} · ${Number(order.pricing.subtotal).toFixed(2)} MXN</Text>
             {Number(order.pricing.discount) > 0 ? <Text style={{ color: colors.olive }}>{t('Monday 2-for-1 discount')} · −${Number(order.pricing.discount).toFixed(2)} MXN</Text> : null}
@@ -245,14 +259,14 @@ export default function TableOrdersScreen() {
           </View> : null}
           {order.tip_percent ? <Text style={{ color: colors.muted }}>{t('Suggested tip')} · {order.tip_percent}%</Text> : null}
           {order.lines.map((line) => {
-            const next = nextStep[line.status];
+            const next = order.fulfillment === 'delivery' && line.status === 'ready' ? undefined : nextStep[line.status];
             const waitingForStarters = (order.fulfillment === undefined || order.fulfillment === 'dine_in') && (line.course === 'main' || line.course === 'dessert')
               && order.lines.some((item) => item.course === 'starter' && !['served', 'declined'].includes(item.status));
             const courseLabels = { starter: 'Starter · serve first', main: 'Main course', dessert: 'Dessert', drink: 'Drink' };
 
             return (
               <View key={line.id} style={[styles.line, { borderColor: colors.muted }]}>
-                <Text style={{ color: colors.text, fontWeight: '700' }}>{line.quantity} × {line.title}</Text>
+                <Text style={{ color: colors.text, fontWeight: '700' }}>{line.quantity} × {t(line.title)}</Text>
                 {line.course ? <Text style={{ color: colors.accent, fontWeight: '700' }}>{t(courseLabels[line.course])}</Text> : null}
                 {waitingForStarters ? <Text style={{ color: colors.muted }}>{t('Waiting for starters to be served')}</Text> : null}
                 <Text style={{ color: colors.muted }}>{t(line.area === 'bar' ? 'Drinks bar' : line.area === 'sushi' ? 'Sushi' : 'Kitchen')} · {t(orderStatusLabels[line.status])}</Text>
@@ -262,7 +276,7 @@ export default function TableOrdersScreen() {
                 {lineNotes(line.removals, line.allergy, line.selections ?? [])}
                 {!customer && next ? (
                   <>
-                    <Button color={colors.accent} title={t(next.label)} disabled={busy || loading || (line.status === 'received' && waitingForStarters) || (next.status === 'served' && order.fulfillment === 'delivery' && order.delivery_status !== 'accepted')} onPress={() =>
+                    <Button color={colors.accent} title={t(next.status === 'served' && order.fulfillment === 'pickup' ? 'Mark picked up' : next.label)} disabled={busy || loading || (line.status === 'received' && waitingForStarters) || (next.status === 'served' && order.fulfillment === 'delivery' && order.delivery_status !== 'accepted')} onPress={() =>
                       line.status === 'review' ? confirmReview(order.id, line.id, line.allergy) : void changeStatus(order.id, line.id, next.status)
                     } />
                     {line.status !== 'ready' ? <Button color={colors.accent} title={t(line.area === 'bar' ? 'Decline drink' : 'Decline dish')} disabled={busy || loading} onPress={() =>
