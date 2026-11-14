@@ -40,7 +40,7 @@ const GOLD_BORDER = '#78502D';
 const CREAM = '#F3DEC5';
 
 // Imagen PNG de ondas japonesas transparentes
-const ondasJaponesas = require('../../assets/images/ondas_japonesas.png');
+const japaneseWaves = require('../../assets/images/ondas_japonesas.png');
 
 // =============================================
 // CÍRCULO DORADO CON DEGRADADO
@@ -472,7 +472,7 @@ export function PromotionNotice() {
             style={styles.promotionWaves}
           >
             <Image
-              source={ondasJaponesas}
+              source={japaneseWaves}
               resizeMode="contain"
               accessible={false}
               style={styles.promotionWavesImage}

@@ -345,95 +345,93 @@ export default function HomeScreen() {
   );
 
   // ---------------------------------------------
-// CARGAR 4 PLATILLOS PARA EL CARRUSEL
-// ---------------------------------------------
+  // CARGAR 4 PLATILLOS PARA EL CARRUSEL
+  // ---------------------------------------------
 
-
-useFocusEffect(
-  useCallback(() => {
-    if (!isCustomer) {
-      setFeaturedCards([]);
-      return;
-    }
-
-    let active = true;
-
-    const loadFeaturedCards = async () => {
-      const candidates: CardItem[] = [];
-      const seenIds = new Set<string>();
-
-      try {
-        // Obtener platillos de diferentes páginas de Django
-        for (let currentPage = 1; currentPage <= 50; currentPage++) {
-          const data = await getCardsPage({
-            search: '',
-            categoryId: null,
-            availableOnly: true,
-            page: currentPage,
-            pageSize: 10,
-            area: null,
-          });
-
-          if (!active) return;
-
-          if (!data || !Array.isArray(data.results)) {
-            break;
-          }
-
-          for (const item of data.results) {
-            const summary = getCardSummary(item);
-            const id = String(item.id);
-
-            // Solo platillos disponibles, con foto y sin repetir
-            if (
-              summary.image &&
-              summary.isAvailable &&
-              !seenIds.has(id)
-            ) {
-              candidates.push(item);
-              seenIds.add(id);
-            }
-          }
-
-          if (!data.next) break;
-        }
-
-        // Mezclar aleatoriamente los platillos
-        for (let i = candidates.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-
-          [candidates[i], candidates[j]] = [
-            candidates[j],
-            candidates[i],
-          ];
-        }
-
-        // Elegir cuatro platillos al azar
-        const selected = candidates.slice(0, 4);
-
-        if (active) {
-          setFeaturedCards(selected);
-        }
-      } catch (err) {
-        console.log(
-          'Error al cargar platillos destacados:',
-          err
-        );
-
-        if (active) {
-          setFeaturedCards([]);
-        }
+  useFocusEffect(
+    useCallback(() => {
+      if (!isCustomer) {
+        setFeaturedCards([]);
+        return;
       }
-    };
 
-    void loadFeaturedCards();
+      let active = true;
 
-    return () => {
-      active = false;
-    };
-  }, [isCustomer])
-);
+      const loadFeaturedCards = async () => {
+        const candidates: CardItem[] = [];
+        const seenIds = new Set<string>();
 
+        try {
+          for (
+            let currentPage = 1;
+            currentPage <= 50;
+            currentPage++
+          ) {
+            const data = await getCardsPage({
+              search: '',
+              categoryId: null,
+              availableOnly: true,
+              page: currentPage,
+              pageSize: 10,
+              area: null,
+            });
+
+            if (!active) return;
+
+            if (!data || !Array.isArray(data.results)) {
+              break;
+            }
+
+            for (const item of data.results) {
+              const summary = getCardSummary(item);
+              const id = String(item.id);
+
+              if (
+                summary.image &&
+                summary.isAvailable &&
+                !seenIds.has(id)
+              ) {
+                candidates.push(item);
+                seenIds.add(id);
+              }
+            }
+
+            if (!data.next) break;
+          }
+
+          for (let i = candidates.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+
+            [candidates[i], candidates[j]] = [
+              candidates[j],
+              candidates[i],
+            ];
+          }
+
+          const selected = candidates.slice(0, 4);
+
+          if (active) {
+            setFeaturedCards(selected);
+          }
+        } catch (err) {
+          console.log(
+            'Error al cargar platillos destacados:',
+            err
+          );
+
+          if (active) {
+            setFeaturedCards([]);
+          }
+        }
+      };
+
+      void loadFeaturedCards();
+
+      return () => {
+        active = false;
+      };
+    }, [isCustomer])
+  );
 
   // ---------------------------------------------
   // ACCIONES
@@ -467,14 +465,14 @@ useFocusEffect(
     setReloadKey((current) => current + 1);
   };
 
- const featured =
-  isCustomer &&
-  page === 1 &&
-  !search &&
-  categoryId === null &&
-  !area
-    ? featuredCards
-    : [];
+  const featured =
+    isCustomer &&
+    page === 1 &&
+    !search &&
+    categoryId === null &&
+    !area
+      ? featuredCards
+      : [];
 
   const openDetails = (item: CardItem) =>
     router.push({
@@ -545,7 +543,6 @@ useFocusEffect(
         keyboardShouldPersistTaps="always"
         ListHeaderComponent={
           <View style={styles.header}>
-
             {/* ENCABEZADO DE MADERA */}
 
             <View style={styles.masthead}>
@@ -997,12 +994,12 @@ useFocusEffect(
             {/* PLATILLO DESTACADO */}
             {/* --------------------------------- */}
 
-           {featured.length > 0 ? (
-  <FeaturedDish
-    cards={featured}
-    onPress={(item) => openDetails(item)}
-  />
-) : null}
+            {featured.length > 0 ? (
+              <FeaturedDish
+                cards={featured}
+                onPress={(item) => openDetails(item)}
+              />
+            ) : null}
 
             {/* RESERVACIONES */}
 
@@ -1055,7 +1052,6 @@ useFocusEffect(
           </Text>
         }
 
-
         ListFooterComponent={
           <View
             style={{
@@ -1065,43 +1061,76 @@ useFocusEffect(
           >
             {page > 1 || hasNextPage ? (
               <View style={styles.pagination}>
-                <Button
-                  color={colors.accent}
-                  title={t('Previous')}
+
+                {/* BOTÓN ANTERIOR */}
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{
+                    disabled: page === 1,
+                  }}
                   disabled={page === 1}
                   onPress={() =>
                     setPage((current) =>
                       Math.max(1, current - 1)
                     )
                   }
-                />
+                  style={({ pressed }) => [
+                    styles.pageButton,
+                    page === 1 && styles.pageButtonDisabled,
+                    pressed &&
+                      page !== 1 &&
+                      styles.pageButtonPressed,
+                  ]}
+                >
+                  <Text style={styles.pageButtonText}>
+                    {t('Previous')}
+                  </Text>
+                </Pressable>
+
+                {/* NÚMERO DE PÁGINA */}
 
                 <Text
                   style={{
-                    color: colors.text,
+                    color: isDark
+                      ? '#D8B067'
+                      : colors.text,
+                    fontSize: 14,
                   }}
                 >
                   {t('Page')} {page}
                 </Text>
 
-                <Button
-                  color={colors.accent}
-                  title={t('Next')}
+                {/* BOTÓN SIGUIENTE */}
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{
+                    disabled: !hasNextPage,
+                  }}
                   disabled={!hasNextPage}
                   onPress={() => {
                     setHasNextPage(false);
-
-                    setPage(
-                      (current) => current + 1
-                    );
+                    setPage((current) => current + 1);
                   }}
-                />
+                  style={({ pressed }) => [
+                    styles.pageButton,
+                    !hasNextPage && styles.pageButtonDisabled,
+                    pressed &&
+                      hasNextPage &&
+                      styles.pageButtonPressed,
+                  ]}
+                >
+                  <Text style={styles.pageButtonText}>
+                    {t('Next')}
+                  </Text>
+                </Pressable>
+
               </View>
             ) : null}
           </View>
         }
 
-      
         renderItem={({ item }) => (
           <View
             style={[
@@ -1119,9 +1148,7 @@ useFocusEffect(
               {...getCardSummary(item)}
               description={item.description}
               englishDescription={item.description_en}
-              onPress={() =>
-                openDetails(item)
-              }
+              onPress={() => openDetails(item)}
             />
           </View>
         )}
@@ -1323,12 +1350,12 @@ const createStyles = (
     },
 
     eyebrow: {
-       color: isDark ? '#D8B067' : colors.accent,
-       fontSize: 10,
-       letterSpacing: 2.5,
-       fontWeight: '700',
-       marginTop: -30,
-       marginBottom: 5,
+      color: isDark ? '#D8B067' : colors.accent,
+      fontSize: 10,
+      letterSpacing: 2.5,
+      fontWeight: '700',
+      marginTop: -30,
+      marginBottom: 5,
     },
 
     quickLinks: {
@@ -1403,25 +1430,27 @@ const createStyles = (
     },
 
     slidingIndicator: {
-  position: 'absolute',
-  left: 0,
-  top: 0,
-  height: 44,
-  borderRadius: 22,
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      height: 44,
+      borderRadius: 22,
 
-  backgroundColor: isDark ? '#801C18' : colors.accent,
+      backgroundColor: isDark
+        ? '#801C18'
+        : colors.accent,
 
-  borderTopWidth: isDark ? 1 : 0,
-  borderTopColor: '#A34437',
+      borderTopWidth: isDark ? 1 : 0,
+      borderTopColor: '#A34437',
 
-  borderBottomWidth: isDark ? 1 : 0,
-  borderBottomColor: '#9B392A',
+      borderBottomWidth: isDark ? 1 : 0,
+      borderBottomColor: '#9B392A',
 
-  borderLeftWidth: isDark ? 0.5 : 0,
-  borderRightWidth: isDark ? 0.5 : 0,
-  borderLeftColor: '#84241D',
-  borderRightColor: '#84241D',
-},
+      borderLeftWidth: isDark ? 0.5 : 0,
+      borderRightWidth: isDark ? 0.5 : 0,
+      borderLeftColor: '#84241D',
+      borderRightColor: '#84241D',
+    },
 
     areaFilter: {
       flex: 1,
@@ -1479,5 +1508,48 @@ const createStyles = (
       gap: 12,
       justifyContent: 'space-between',
       alignItems: 'center',
+    },
+
+    // -----------------------------------------
+    // BOTONES ROJO VINO Y REDONDEADOS
+    // -----------------------------------------
+
+    pageButton: {
+      backgroundColor: '#801C18',
+      borderRadius: 30,
+      minHeight: 46,
+      minWidth: 105,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+
+      borderTopWidth: 1,
+      borderTopColor: '#A34437',
+
+      borderBottomWidth: 1,
+      borderBottomColor: '#9B392A',
+
+      borderLeftWidth: 0.5,
+      borderLeftColor: '#84241D',
+
+      borderRightWidth: 0.5,
+      borderRightColor: '#84241D',
+    },
+
+    pageButtonText: {
+      color: '#F7E6D4',
+      fontSize: 13,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+
+    pageButtonDisabled: {
+      opacity: 0.45,
+    },
+
+    pageButtonPressed: {
+      opacity: 0.8,
     },
   });

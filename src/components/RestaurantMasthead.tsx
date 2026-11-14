@@ -21,8 +21,8 @@ import { usePreferences } from '../context/PreferencesContext';
 import { restaurantBrand } from '../constants/restaurantBrand';
 import { OrderInboxButton } from '../context/OrdersContext';
 
-const madera = require('../../assets/images/madera.jpg');
-const imageSize = Image.resolveAssetSource(madera);
+const woodBackground = require('../../assets/images/madera.jpg');
+const imageSize = Image.resolveAssetSource(woodBackground);
 
 // =============================================
 // TRÉBOL DE CUATRO PÉTALOS
@@ -76,7 +76,7 @@ export function RestaurantMasthead() {
   return (
     <View style={styles.hero}>
       <ImageBackground
-        source={madera}
+        source={woodBackground}
         resizeMode="contain"
         style={[
           styles.background,
